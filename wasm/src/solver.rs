@@ -3,22 +3,18 @@ extern crate itertools;
 use crate::sudoku::*;
 use crate::flags::*;
 use crate::matching::has_perfect_matching;
+use std::cell::RefCell;
 use std::cmp::Ordering::Equal;
 use itertools::Itertools;
 
-pub fn solution(sudoku: Sudoku) -> Option<Sudoku> {
-  let min_option_pos = sudoku.iter()
-    .filter(|(d, _)| *d == 0)
-    .map(|(_, (x, y))| (sudoku.used((x, y)).inverse(sudoku.board_size() as u8), (x, y)))
-    .min_by(|(f1, _), (f2, _)| f1.partial_cmp(f2).unwrap_or(std::cmp::Ordering::Equal));
-
-  match min_option_pos {
+pub fn solution(sudoku: Sudoku, aborted: &RefCell<bool>) -> Option<Sudoku> {
+  match get_best_options(&sudoku) {
     None => Some(sudoku),
     Some((flags, (x, y))) => {
       flags.to_vec().into_iter().fold(None, |prev, digit| match prev {
         None => {
           let updated_sudoku = sudoku.clone().set((x, y), digit);
-          solution(updated_sudoku)
+          solution(updated_sudoku, aborted)
         }
         Some (s) => Some(s)
       })
@@ -26,28 +22,41 @@ pub fn solution(sudoku: Sudoku) -> Option<Sudoku> {
   }
 }
 
-pub fn solution_iter(sudoku: Sudoku) -> Box<dyn Iterator<Item=Sudoku>> {
-  let options = sudoku.iter()
+fn get_best_options(sudoku: &Sudoku) -> Option<(Flags, (usize, usize))> {
+  let options: Vec<_> = sudoku.iter()
     .filter(|(d, _)| *d == 0)
-    .map(|(_, pos)| (sudoku.available(pos), pos));
+    .map(|(_, pos)| (sudoku.available(pos), pos))
+    .collect();
 
-  let best_options_pos = options.min_by(|(f1, _), (f2, _)| f1.partial_cmp(f2).unwrap_or(Equal));
+  let min_option_pos = options.iter()
+    .min_by(|(f1, _), (f2, _)| f1.partial_cmp(f2).unwrap_or(Equal));
 
-  // TODO make use of is_unsolvable here
-  // let best_options_pos = if min_option_pos.is_some_and(|(f, _)| f.size() > 1) {
-  //   options.
-  // } else {
-  //   min_option_pos
-  // };
+  if min_option_pos.is_some_and(|(f, _)| f.size() > 1) {
+    options.iter()
+      .map(|(flags, pos)| {
+        let real_possibilities = flags.to_vec().into_iter()
+          .filter(|digit| {
+            let updated_sudoku = sudoku.clone().set(*pos, *digit);
+            !is_unsolvable(&updated_sudoku)
+          })
+          .collect();
+        (Flags::from_vec(real_possibilities), *pos)
+      }).min_by(|(f1, _), (f2, _)| f1.partial_cmp(f2).unwrap_or(Equal))
+  } else {
+    min_option_pos.map(|x| *x)
+  }
+}
 
-  match best_options_pos {
+pub fn solution_iter<'r> (sudoku: Sudoku, aborted: &'r RefCell<bool>) 
+    -> Box<dyn Iterator<Item=Sudoku> + 'r> {
+  match get_best_options(&sudoku) {
     None => Box::new(vec![sudoku].into_iter()),
-    Some((flags, (x, y))) => {
+    Some((flags, pos)) => {
       return Box::new(
         flags.to_vec().into_iter()
           .flat_map(move |digit| {
-            let updated_sudoku = sudoku.clone().set((x, y), digit);
-            solution_iter(updated_sudoku)
+            let updated_sudoku = sudoku.clone().set(pos, digit);
+            solution_iter(updated_sudoku, aborted)
           })
         )
     }
@@ -75,7 +84,7 @@ pub fn is_unsolvable(sudoku: &Sudoku) -> bool {
   is_field_out_of_options || row_without_solution || column_without_solution || box_without_solution
 }
 
-pub fn contradiction(sudoku: &Sudoku, level: u8) -> bool {
+pub fn contradiction(sudoku: &Sudoku, level: u8, aborted: &RefCell<bool>) -> bool {
   match level {
     0 => false,
     1 => is_unsolvable(&sudoku),
@@ -89,14 +98,15 @@ pub fn contradiction(sudoku: &Sudoku, level: u8) -> bool {
       options.iter().any(|(flags, (x, y))| {
         flags.to_vec().iter().all(|digit| {
           let updated_sudoku = sudoku.clone().set((*x, *y), *digit);
-          is_unsolvable(&updated_sudoku) || contradiction(&updated_sudoku, level - 1)
+          is_unsolvable(&updated_sudoku) || contradiction(&updated_sudoku, level - 1, aborted)
         })
       })
     }
   }
 }
 
-pub fn hint(sudoku: Sudoku, max_level: u8) -> Option<(u8, (usize, usize))> {
+pub fn hint(sudoku: Sudoku, max_level: u8, aborted: &RefCell<bool>) 
+  -> Option<(u8, (usize, usize), u8)> {
   let mut options: Vec<(Vec<u8>, (usize, usize))> = sudoku.iter()
     .filter(|(d, _)| *d == 0)
     .map(|(_, pos)| (sudoku.available(pos).to_vec(), pos))
@@ -108,7 +118,7 @@ pub fn hint(sudoku: Sudoku, max_level: u8) -> Option<(u8, (usize, usize))> {
       let real_possibilities: Vec<u8> = possibilities.into_iter()
         .filter(|digit| {
           let updated_sudoku = sudoku.clone().set((x, y), *digit);
-          !contradiction(&updated_sudoku, level)
+          !contradiction(&updated_sudoku, level, aborted)
         }).collect();
       (real_possibilities, (x, y))
     }).collect();
@@ -122,7 +132,7 @@ pub fn hint(sudoku: Sudoku, max_level: u8) -> Option<(u8, (usize, usize))> {
           0 => { return None; }
           1 => { 
             println!("{}", level);
-            return Some((moves[0], *pos)); 
+            return Some((moves[0], *pos, level)); 
           }
           _ => {}
         }
@@ -144,7 +154,6 @@ macro_rules! time {
 
 #[cfg(test)]
 mod test {
-  use crate::sudoku::*;
   use crate::solver::*;
   
   #[test]
@@ -155,7 +164,7 @@ mod test {
       + "2  1"
       + "1   ";
     let sudoku = Sudoku::load(data.as_str(), 2);
-    let all = (*solution_iter(sudoku)).next();
+    let all = (*solution_iter(sudoku, &RefCell::new(false))).next();
     println!("{:?}", all);
   }
 
@@ -179,12 +188,12 @@ mod test {
       .set((1, 8), 3)
       .set((3, 8), 9)
       .set((4, 8), 1);
-    let sol = time!(solution(sudoku.clone()).unwrap());
+    let sol = time!(solution_iter(sudoku, &RefCell::new(false)).next().unwrap());
     println!("{:?}", sol);
   }
 
   fn solve_by_hints(mut sudoku: Sudoku) -> Sudoku {
-    while let Some((d, pos)) = hint(sudoku.clone(), 3) {
+    while let Some((d, pos, _)) = hint(sudoku.clone(), 3, &RefCell::new(false)) {
       sudoku = sudoku.set(pos, d)     
     }
     sudoku
@@ -231,7 +240,7 @@ mod test {
       + "  5" + "246" + "  8";
 
     let sudoku = Sudoku::load(data.as_str(), 3);
-    println!("{:?}", hint(sudoku, 3));
+    println!("{:?}", hint(sudoku, 3, &RefCell::new(false)));
   }
 
   #[test]
@@ -251,7 +260,7 @@ mod test {
       + "   " + "246" + "  8";
 
     let sudoku = Sudoku::load(data.as_str(), 3);
-    println!("{:?}", hint(sudoku, 3));
+    println!("{:?}", hint(sudoku, 3, &RefCell::new(false)));
   }
 
   #[test]
@@ -271,7 +280,7 @@ mod test {
       + " 9 " + "   " + "4  ";
 
     let sudoku = Sudoku::load(data.as_str(), 3);
-    let sol = time!(solution(sudoku).unwrap());
+    let sol = time!(solution(sudoku, &RefCell::new(false)).unwrap());
     println!("{}", sol)
   }
 

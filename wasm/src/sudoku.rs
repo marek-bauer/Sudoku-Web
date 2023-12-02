@@ -7,7 +7,7 @@ use crate::flags::*;
 
 pub type Position = (usize, usize);
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, PartialOrd, Ord, Eq)]
 pub struct Sudoku {
   size: u8,
   board: Vec<Vec<u8>>,
