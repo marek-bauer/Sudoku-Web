@@ -41,6 +41,10 @@ impl Flags {
     res
   }
 
+  pub fn from_vec(v: Vec<u8>) -> Self {
+    v.iter().fold(Flags::empty(), |flags, val| flags.set(*val))
+  }
+
   pub fn to_usize_vec(mut self) -> Vec<usize> {
     let mut res = vec![];
     let mut i = 0;

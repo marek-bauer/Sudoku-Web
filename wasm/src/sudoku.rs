@@ -111,9 +111,9 @@ impl Sudoku {
     let all_rows_correct = (0 .. self.board_size())
       .all(|y| self.used_in_row(y).size() == self.board_size() as u8);
     let all_columns_correct = (0 .. self.board_size())
-      .all(|x| self.used_in_column(y).size() == self.board_size() as u8);
+      .all(|x| self.used_in_column(x).size() == self.board_size() as u8);
     let all_boxes_correct = (0 .. self.box_size())
-      .flat_map(|x| (0 .. self.box_size()).map(|y| (x, y)))
+      .flat_map(|x| (0 .. self.box_size()).map(move |y| (x, y)))
       .all(|pos| self.used_in_box(pos).size() == self.board_size() as u8);
 
       all_rows_correct && all_columns_correct && all_boxes_correct

@@ -1,6 +1,5 @@
 extern crate itertools;
 
-use crate::sudoku;
 use crate::sudoku::*;
 use crate::flags::*;
 use crate::matching::has_perfect_matching;
@@ -28,12 +27,20 @@ pub fn solution(sudoku: Sudoku) -> Option<Sudoku> {
 }
 
 pub fn solution_iter(sudoku: Sudoku) -> Box<dyn Iterator<Item=Sudoku>> {
-  let min_option_pos = sudoku.iter()
+  let options = sudoku.iter()
     .filter(|(d, _)| *d == 0)
-    .map(|(_, pos)| (sudoku.available(pos), pos))
-    .min_by(|(f1, _), (f2, _)| f1.partial_cmp(f2).unwrap_or(Equal));
+    .map(|(_, pos)| (sudoku.available(pos), pos));
 
-  match min_option_pos {
+  let best_options_pos = options.min_by(|(f1, _), (f2, _)| f1.partial_cmp(f2).unwrap_or(Equal));
+
+  // TODO make use of is_unsolvable here
+  // let best_options_pos = if min_option_pos.is_some_and(|(f, _)| f.size() > 1) {
+  //   options.
+  // } else {
+  //   min_option_pos
+  // };
+
+  match best_options_pos {
     None => Box::new(vec![sudoku].into_iter()),
     Some((flags, (x, y))) => {
       return Box::new(
@@ -245,6 +252,27 @@ mod test {
 
     let sudoku = Sudoku::load(data.as_str(), 3);
     println!("{:?}", hint(sudoku, 3));
+  }
+
+  #[test]
+  fn load_save_test121() {
+    let data 
+      = "".to_string()
+      + "8  " + "   " + "   "
+      + "  3" + "6  " + "   "
+      + " 7 " + "  9" + "2  "
+
+      + " 5 " + "  7" + "   "
+      + "   " + " 45" + "7  "
+      + "   " + "1  " + " 3 "
+
+      + "  1" + "   " + " 68"
+      + "  8" + "5  " + " 1 "
+      + " 9 " + "   " + "4  ";
+
+    let sudoku = Sudoku::load(data.as_str(), 3);
+    let sol = time!(solution(sudoku).unwrap());
+    println!("{}", sol)
   }
 
   #[test]
