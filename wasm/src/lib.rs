@@ -6,7 +6,7 @@ pub mod matching;
 
 use std::cell::RefCell;
 
-use solver::solution_iter;
+use solver::*;
 use sudoku::Sudoku;
 use wasm_bindgen::prelude::*;
 
@@ -25,20 +25,25 @@ struct SudokuState {
 #[wasm_bindgen]
 impl SudokuState {
   fn new(input: Sudoku, solutions: Vec<Sudoku>, unique: Option<bool>) -> SudokuState {
-    let solutions_abort = RefCell::new(true);
     SudokuState{
       input: input.clone(),
       solutions: solutions,
       has_unique_solution: unique,
       found_hint: None,
-      abort_solution_computations: solutions_abort,
+      abort_solution_computations: RefCell::new(true),
+      solution_computations_in_progress: false,
       abort_hint_computations: RefCell::new(false),
+      hint_computations_in_progress: false,
     }
   }
 
   pub fn new_empty(data: String, size: u8) -> SudokuState {
     let input_sudoku = Sudoku::load(data.as_str(), size);
-    SudokuState::new(input_sudoku, vec![], None)
+    match solution(input_sudoku.clone(), &RefCell::new(false)) {
+      None => SudokuState::new(input_sudoku, vec![], Some(false)),
+      Some(s) => SudokuState::new(input_sudoku, vec![s], None),
+    }
+    
   }
 
   pub fn new_with_known_solution(current: String, solution: String, size: u8) -> SudokuState {
@@ -53,11 +58,30 @@ impl SudokuState {
     SudokuState::new(input_sudoku, vec![solution_sudoku], Some(true))
   }
 
-  pub fn compute_hint(&mut self) {
+  pub fn compute_hint(&mut self, max_level: u8) {
+    self.hint_computations_in_progress = true;
+    let hint = hint(self.input.clone(), max_level, &self.abort_hint_computations);
+    self.found_hint = match hint {
+      None => None,
+      Some((digit, (x, y), level)) => 
+        Some (Hint { x: x as u8, y: y as u8, digit, level })
+    };
+    self.hint_computations_in_progress = false;
   }
 
-  pub fn get_hint(&mut self) -> Option<Hint>{
-    None
+  pub fn get_hint(&self) -> Option<Hint>{
+    match &self.found_hint {
+      Some(h) => Some(h.clone()),
+      None if self.solutions.len() > 0 => {
+        let solution = &self.solutions[0]; 
+        (0 .. self.input.board_size())
+          .flat_map(|x| (0 .. self.input.board_size()).map(move |y| (x, y)))
+          .filter(|pos| self.input.at(*pos) == 0)
+          .map(|(x, y)| Hint { x: x as u8, y: y as u8, digit: solution.at((x, y)), level: 100})
+          .next()
+      }
+      _ => None
+    }
   }
 
   pub fn abort_hints_computations(&mut self) {
@@ -69,17 +93,19 @@ impl SudokuState {
     *self.abort_solution_computations.borrow_mut() = true;
   }
 
-  pub fn has_unique_solution(&mut self) -> bool {
-    true
+  pub fn has_unique_solution(&mut self) -> Option<bool> {
+    self.has_unique_solution
   }
 
   pub fn get_solution(&self) -> Option<String> {
-    None
-  }
-
-  fn add_solution(&mut self, sudoku: Sudoku) {
-    if !self.solutions.contains(&sudoku) {
-      self.solutions.push(sudoku)
+    if self.solutions.len() > 0 {
+      Some(self.solutions[0].save())
+    } else if self.has_unique_solution.is_none() {
+      *self.abort_solution_computations.borrow_mut() = false;
+      solution(self.input.clone(), &self.abort_solution_computations)
+        .map(|s| s.save())
+    } else {
+      None
     }
   }
 
@@ -93,7 +119,9 @@ impl SudokuState {
     self.solution_computations_in_progress = true;
     let iter = solution_iter(self.input.clone(), &self.abort_solution_computations);
     for sol in iter {
-      self.add_solution(sol)
+      if !self.solutions.contains(&sol) {
+        self.solutions.push(sol)
+      }
     }
     if self.solutions.len() == 1 {
       self.has_unique_solution = Some(true);
@@ -108,6 +136,7 @@ impl SudokuState {
   }
 }
 
+#[derive(Clone)]
 #[wasm_bindgen]
 struct Hint {
   x: u8,
@@ -132,21 +161,5 @@ impl Hint {
 
   pub fn get_level(&self) -> u8 {
     self.level
-  }
-}
-
-#[cfg(test)]
-mod test {
-    use std::cell::RefCell;
-
-  #[test]
-  fn t() {
-    unsafe {
-      let mut t: RefCell<bool> = RefCell::new(true);
-      let y = &t;
-
-      *t.borrow_mut() = false;
-      println!("{} {}", t.borrow(), y.borrow())    
-    }
   }
 }
