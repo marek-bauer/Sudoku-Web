@@ -1,7 +1,7 @@
 {
   "private": true,
   "dependencies": {
-    "wasm": "file:./wasm/pkg"
+    "wasm_sudoku_solver": "file:./wasm/pkg"
   },
   "devDependencies": {
     "@parcel/transformer-js": "^2.10.3",
