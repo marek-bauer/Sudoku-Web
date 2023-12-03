@@ -3,12 +3,12 @@ pub mod sudoku;
 pub mod solver;
 pub mod flags;
 pub mod matching;
-
-use std::cell::RefCell;
+pub mod abort_lock;
 
 use solver::*;
 use sudoku::Sudoku;
 use wasm_bindgen::prelude::*;
+use abort_lock::AbortLock;
 
 #[wasm_bindgen]
 extern "C" {
@@ -16,29 +16,11 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub struct AbortLock(RefCell<bool>);
-
-#[wasm_bindgen]
-impl AbortLock {
-  pub fn prepare() -> AbortLock {
-    AbortLock( RefCell::new(false) )
-  }
-
-  pub fn abort(&mut self) {
-    *self.0.borrow_mut() = true;
-  }
-
-  pub fn is_locked(&self) -> bool {
-    !*(self.0.borrow())
-  }
-}
-
-#[wasm_bindgen]
 pub fn solve_sudoku(sudoku_str: &str, size: u8, lock: &AbortLock) -> Option<String> {
   let sudoku = Sudoku::load(sudoku_str, size);
-  
+
   if lock.is_locked() {
-    solution(sudoku, &(lock.0)).map(|s| s.save())
+    solution(sudoku, &lock).map(|s| s.save())
   } else {
     None
   }
@@ -49,7 +31,7 @@ pub fn get_hint(sudoku_str: &str, size: u8, max_level: u8, lock: &AbortLock) -> 
   let sudoku = Sudoku::load(sudoku_str, size);
 
   if lock.is_locked() {
-    match hint(sudoku, max_level, &(lock.0)) {
+    match hint(sudoku, max_level, &lock) {
       None => None,
       Some((digit, (x, y), level)) => 
         Some (Hint { x: x as u8, y: y as u8, digit, level })
@@ -65,7 +47,7 @@ pub fn get_all_solutions(sudoku_str: &str, size: u8, lock: &AbortLock) -> Option
 
   let mut solutions = vec![];
   if lock.is_locked() {
-    let iter = solution_iter(sudoku, &(lock.0));
+    let iter = solution_iter(sudoku, &lock);
     for s in iter {
       solutions.push(s.save())
     }

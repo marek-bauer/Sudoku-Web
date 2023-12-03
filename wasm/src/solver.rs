@@ -3,18 +3,21 @@ extern crate itertools;
 use crate::sudoku::*;
 use crate::flags::*;
 use crate::matching::has_perfect_matching;
-use std::cell::RefCell;
+use crate::abort_lock::*;
 use std::cmp::Ordering::Equal;
 use itertools::Itertools;
 
-pub fn solution(sudoku: Sudoku, aborted: &RefCell<bool>) -> Option<Sudoku> {
+pub fn solution(sudoku: Sudoku, lock: &AbortLock) -> Option<Sudoku> {
+  if lock.is_aborted() {
+    return None;
+  }
   match get_best_options(&sudoku) {
     None => Some(sudoku),
     Some((flags, (x, y))) => {
       flags.to_vec().into_iter().fold(None, |prev, digit| match prev {
         None => {
           let updated_sudoku = sudoku.clone().set((x, y), digit);
-          solution(updated_sudoku, aborted)
+          solution(updated_sudoku, lock)
         }
         Some (s) => Some(s)
       })
@@ -47,8 +50,11 @@ fn get_best_options(sudoku: &Sudoku) -> Option<(Flags, (usize, usize))> {
   }
 }
 
-pub fn solution_iter<'r> (sudoku: Sudoku, aborted: &'r RefCell<bool>) 
+pub fn solution_iter<'r> (sudoku: Sudoku, lock: &'r AbortLock) 
     -> Box<dyn Iterator<Item=Sudoku> + 'r> {
+  if lock.is_aborted() {
+    return Box::new(vec![].into_iter());
+  }
   match get_best_options(&sudoku) {
     None => Box::new(vec![sudoku].into_iter()),
     Some((flags, pos)) => {
@@ -56,7 +62,7 @@ pub fn solution_iter<'r> (sudoku: Sudoku, aborted: &'r RefCell<bool>)
         flags.to_vec().into_iter()
           .flat_map(move |digit| {
             let updated_sudoku = sudoku.clone().set(pos, digit);
-            solution_iter(updated_sudoku, aborted)
+            solution_iter(updated_sudoku, lock)
           })
         )
     }
@@ -84,7 +90,11 @@ pub fn is_unsolvable(sudoku: &Sudoku) -> bool {
   is_field_out_of_options || row_without_solution || column_without_solution || box_without_solution
 }
 
-pub fn contradiction(sudoku: &Sudoku, level: u8, aborted: &RefCell<bool>) -> bool {
+pub fn contradiction(sudoku: &Sudoku, level: u8, lock: &AbortLock) -> bool {
+  if lock.is_aborted() {
+    return false;
+  }
+
   match level {
     0 => false,
     1 => is_unsolvable(&sudoku),
@@ -98,14 +108,14 @@ pub fn contradiction(sudoku: &Sudoku, level: u8, aborted: &RefCell<bool>) -> boo
       options.iter().any(|(flags, (x, y))| {
         flags.to_vec().iter().all(|digit| {
           let updated_sudoku = sudoku.clone().set((*x, *y), *digit);
-          is_unsolvable(&updated_sudoku) || contradiction(&updated_sudoku, level - 1, aborted)
+          is_unsolvable(&updated_sudoku) || contradiction(&updated_sudoku, level - 1, lock)
         })
       })
     }
   }
 }
 
-pub fn hint(sudoku: Sudoku, max_level: u8, aborted: &RefCell<bool>) 
+pub fn hint(sudoku: Sudoku, max_level: u8, lock: &AbortLock) 
   -> Option<(u8, (usize, usize), u8)> {
   let mut options: Vec<(Vec<u8>, (usize, usize))> = sudoku.iter()
     .filter(|(d, _)| *d == 0)
@@ -114,11 +124,15 @@ pub fn hint(sudoku: Sudoku, max_level: u8, aborted: &RefCell<bool>)
     .collect();
 
   for level in 0 ..= max_level {
+    if lock.is_aborted() {
+      return None;
+    }
+
     options = options.into_iter().map(|(possibilities, (x, y))| {
       let real_possibilities: Vec<u8> = possibilities.into_iter()
         .filter(|digit| {
           let updated_sudoku = sudoku.clone().set((x, y), *digit);
-          !contradiction(&updated_sudoku, level, aborted)
+          !contradiction(&updated_sudoku, level, lock)
         }).collect();
       (real_possibilities, (x, y))
     }).collect();
@@ -131,7 +145,6 @@ pub fn hint(sudoku: Sudoku, max_level: u8, aborted: &RefCell<bool>)
         match moves.len() {
           0 => { return None; }
           1 => { 
-            println!("{}", level);
             return Some((moves[0], *pos, level)); 
           }
           _ => {}
@@ -142,109 +155,150 @@ pub fn hint(sudoku: Sudoku, max_level: u8, aborted: &RefCell<bool>)
   None
 }
 
-macro_rules! time {
-  ($x:expr) => {{
-  let start = std::time::Instant::now();
-  let result = $x;
-  let duration = start.elapsed();
-  println!("Time taken: {:?}", duration);
-  result
-  }};
-}
-
 #[cfg(test)]
 mod test {
   use crate::solver::*;
+
+  macro_rules! time {
+    ($x:expr) => {{
+    let start = std::time::Instant::now();
+    let result = $x;
+    let duration = start.elapsed();
+    println!("Time taken: {:?}", duration);
+    result
+    }};
+  }
+
+  fn solve_by_hints(mut sudoku: Sudoku) -> Option<Sudoku> {
+    while let Some((d, pos, _)) = hint(sudoku.clone(), 2, &AbortLock::prepare()) {
+      sudoku = sudoku.set(pos, d)     
+    }
+    if sudoku.is_solved() {
+      Some(sudoku)
+    } else {
+      None
+    }
+  }
+
+  fn collect_all<'r, A>(iter: Box<dyn Iterator<Item = A> + 'r>) -> Vec<A> {
+    let mut res = vec![];
+    for i in iter {
+      res.push(i);
+    }
+    res
+  }
   
   #[test]
-  fn load_save_test() {
+  fn trivial_solution() {
     let data 
       = "   3".to_string()
       + "3  2"
       + "2  1"
       + "1   ";
     let sudoku = Sudoku::load(data.as_str(), 2);
-    let all = (*solution_iter(sudoku, &RefCell::new(false))).next();
-    println!("{:?}", all);
+    let solution = solution(sudoku, &AbortLock::prepare());
+    assert!(solution.is_some_and(|x| x.is_solved()));
   }
 
   #[test]
-  fn load_save_test6() {
-    let sudoku = Sudoku::empty(3)
-      .set((7, 0), 1)
-      .set((5, 1), 2)
-      .set((8, 1), 3)
-      .set((3, 2), 4)
-      .set((6, 3), 5)
-      .set((0, 4), 4)
-      .set((2, 4), 1)
-      .set((3, 4), 6)
-      .set((2, 5), 7)
-      .set((3, 5), 1)
-      .set((1, 6), 5)
-      .set((6, 6), 2)
-      .set((4, 7), 8)
-      .set((7, 7), 4)
-      .set((1, 8), 3)
-      .set((3, 8), 9)
-      .set((4, 8), 1);
-    let sol = time!(solution_iter(sudoku, &RefCell::new(false)).next().unwrap());
-    println!("{:?}", sol);
-  }
-
-  fn solve_by_hints(mut sudoku: Sudoku) -> Sudoku {
-    while let Some((d, pos, _)) = hint(sudoku.clone(), 3, &RefCell::new(false)) {
-      sudoku = sudoku.set(pos, d)     
-    }
-    sudoku
+  fn trivial_solution_by_hints() {
+    let data 
+      = "   3".to_string()
+      + "3  2"
+      + "2  1"
+      + "1   ";
+    let sudoku = Sudoku::load(data.as_str(), 2);
+    let solution = solve_by_hints(sudoku);
+    assert!(solution.is_some_and(|x| x.is_solved()));
   }
 
   #[test]
-  fn load_save_test1() {
-    let sudoku = Sudoku::empty(3)
-      .set((7, 0), 1)
-      .set((5, 1), 2)
-      .set((8, 1), 3)
-      .set((3, 2), 4)
-      .set((6, 3), 5)
-      .set((0, 4), 4)
-      .set((2, 4), 1)
-      .set((3, 4), 6)
-      .set((2, 5), 7)
-      .set((3, 5), 1)
-      .set((1, 6), 5)
-      .set((6, 6), 2)
-      .set((4, 7), 8)
-      .set((7, 7), 4)
-      .set((1, 8), 3)
-      .set((3, 8), 9)
-      .set((4, 8), 1);
-    let sol = time!(solve_by_hints(sudoku));
-    println!("{}", sol)
-  }
-
-  #[test]
-  fn load_save_test2() {
+  fn minimal_solution() {
     let data 
       = "".to_string()
-      + "2  " + "6 7" + "5  "
-      + "   " + "   " + " 96"
-      + "6 7" + "  1" + "3  "
+      + "   " + "   " + " 1 "
+      + "   " + "  2" + "  3"
+      + "   " + "4  " + "   "
 
-      + " 5 " + "732" + "   "
-      + " 7 " + "   " + " 2 "
-      + "   " + "189" + " 7 "
+      + "   " + "   " + "5  "
+      + "4 1" + "6  " + "   "
+      + "  7" + "1  " + "   "
 
-      + "  3" + "5  " + "6 4"
-      + "84 " + "   " + "   "
-      + "  5" + "246" + "  8";
-
+      + " 5 " + "   " + "2  "
+      + "   " + " 8 " + " 4 "
+      + " 3 " + "91 " + "   ";
+    
     let sudoku = Sudoku::load(data.as_str(), 3);
-    println!("{:?}", hint(sudoku, 3, &RefCell::new(false)));
+    let solution = time!(solution(sudoku, &AbortLock::prepare()));
+    assert!(solution.is_some_and(|x| x.is_solved()));
   }
 
   #[test]
-  fn load_save_test8() {
+  fn minimal_all_solutions() {
+    let data 
+      = "".to_string()
+      + "   " + "   " + " 1 "
+      + "   " + "  2" + "  3"
+      + "   " + "4  " + "   "
+
+      + "   " + "   " + "5  "
+      + "4 1" + "6  " + "   "
+      + "  7" + "1  " + "   "
+
+      + " 5 " + "   " + "2  "
+      + "   " + " 8 " + " 4 "
+      + " 3 " + "91 " + "   ";
+  
+    let sudoku = Sudoku::load(data.as_str(), 3);
+    let solutions = time!(collect_all(solution_iter(sudoku, &AbortLock::prepare())));
+    assert!(solutions.len() == 1);
+    assert!(solutions[0].is_solved());
+  }
+
+  #[test]
+  fn another_hard_sudoku_solution() {
+    let data 
+      = "".to_string()
+      + "   " + "   " + "   "
+      + " 9 " + " 1 " + " 3 "
+      + "  6" + " 2 " + "7  "
+
+      + "   " + "3 4" + "   "
+      + "21 " + "   " + " 98"
+      + "   " + "   " + "   "
+
+      + "  2" + "5 6" + "4  "
+      + " 8 " + "   " + " 1 "
+      + "   " + "   " + "   ";
+    
+    let sudoku = Sudoku::load(data.as_str(), 3);
+    let solution = time!(solution(sudoku, &AbortLock::prepare()));
+    assert!(solution.is_some_and(|x| x.is_solved()));
+  }
+
+  #[test]
+  fn corrupted_sudoku_solution() {
+    let data 
+      = "".to_string()
+      + "9  " + "   " + "   "
+      + " 9 " + " 1 " + " 3 "
+      + "  6" + " 2 " + "7  "
+
+      + "   " + "3 4" + "   "
+      + "21 " + "   " + " 98"
+      + "   " + "   " + "   "
+
+      + "  2" + "5 6" + "4  "
+      + " 8 " + "   " + " 1 "
+      + "   " + "   " + "   ";
+    
+    let sudoku = Sudoku::load(data.as_str(), 3);
+    let solution = time!(solution(sudoku, &AbortLock::prepare()));
+    assert!(solution.is_none());
+  }
+
+  #[test]
+  fn hint_test() {
     let data 
       = "".to_string()
       + "   " + "   " + "   "
@@ -260,11 +314,11 @@ mod test {
       + "   " + "246" + "  8";
 
     let sudoku = Sudoku::load(data.as_str(), 3);
-    println!("{:?}", hint(sudoku, 3, &RefCell::new(false)));
+    assert_eq!(Some((3, (7, 8), 1)), hint(sudoku, 3, &AbortLock::prepare()));
   }
 
   #[test]
-  fn load_save_test121() {
+  fn hardest_for_logic_sudoku_solution() {
     let data 
       = "".to_string()
       + "8  " + "   " + "   "
@@ -280,12 +334,12 @@ mod test {
       + " 9 " + "   " + "4  ";
 
     let sudoku = Sudoku::load(data.as_str(), 3);
-    let sol = time!(solution(sudoku, &RefCell::new(false)).unwrap());
-    println!("{}", sol)
+    let solution = time!(solution(sudoku, &AbortLock::prepare()));
+    assert!(solution.is_some_and(|x| x.is_solved()));
   }
 
   #[test]
-  fn load_save_test3() {
+  fn hard_sudoku_solution() {
     let data 
       = "".to_string()
       + "3  " + " 2 " + "   "
@@ -301,12 +355,12 @@ mod test {
       + " 4 " + "  6" + "3  ";
 
     let sudoku = Sudoku::load(data.as_str(), 3);
-    let sol = time!(solve_by_hints(sudoku));
-    println!("{}", sol)
+    let solution = time!(solution(sudoku, &AbortLock::prepare()));
+    assert!(solution.is_some_and(|x| x.is_solved()));
   }
 
   #[test]
-  fn load_save_test4() {
+  fn medium_sudoku_solution() {
     let data 
       = "".to_string()
       + "  8" + "  3" + "461"
@@ -322,7 +376,73 @@ mod test {
       + "763" + "4 1" + "8 2";
 
     let sudoku = Sudoku::load(data.as_str(), 3);
-    let sol = time!(solve_by_hints(sudoku));
-    println!("{}", sol)
+    let solution = time!(solution(sudoku, &AbortLock::prepare()));
+    assert!(solution.is_some_and(|x| x.is_solved()));
+  }
+
+  #[test]
+  fn hard_for_brute_force_sudoku_solution() {
+    let data 
+      = "".to_string()
+      + "   " + "   " + "   "
+      + "   " + "  3" + " 85"
+      + "  1" + " 2 " + "   "
+
+      + "   " + "5 7" + "   "
+      + "  4" + "   " + "1  "
+      + " 9 " + "   " + "   "
+
+      + "5  " + "   " + " 73"
+      + "  2" + " 1 " + "   "
+      + "   " + " 4 " + "  9";
+
+    let sudoku = Sudoku::load(data.as_str(), 3);
+    let solution = time!(solution(sudoku, &AbortLock::prepare()));
+    assert!(solution.is_some_and(|x| x.is_solved()));
+  }
+
+  #[test]
+  fn hard_for_brute_force_sudoku_all_solutions() {
+    let data 
+      = "".to_string()
+      + "   " + "   " + "   "
+      + "   " + "  3" + " 85"
+      + "  1" + " 2 " + "   "
+
+      + "   " + "5 7" + "   "
+      + "  4" + "   " + "1  "
+      + " 9 " + "   " + "   "
+
+      + "5  " + "   " + " 73"
+      + "  2" + " 1 " + "   "
+      + "   " + " 4 " + "  9";
+
+    let sudoku = Sudoku::load(data.as_str(), 3);
+    let solutions = time!(collect_all(solution_iter(sudoku, &AbortLock::prepare())));
+    assert!(solutions.len() == 1);
+    assert!(solutions[0].is_solved());
+  }
+
+  #[ignore = "It takes to long to finish"] 
+  #[test]
+  fn non_unique_solution_test() {
+    let data 
+      = "".to_string()
+      + "   " + "   " + "   "
+      + " 9 " + " 1 " + " 3 "
+      + "  6" + " 2 " + "7  "
+
+      + "   " + "3 4" + "   "
+      + "21 " + "   " + " 98"
+      + "   " + "   " + "   "
+
+      + "  2" + "5 6" + "   "
+      + " 8 " + "   " + "   "
+      + "   " + "   " + "   ";
+
+    let sudoku = Sudoku::load(data.as_str(), 3);
+    let solutions = time!(collect_all(solution_iter(sudoku, &AbortLock::prepare())));
+    assert!(solutions.len() > 1);
+    assert!(solutions.iter().all(|x| x.is_solved()));
   }
 }
