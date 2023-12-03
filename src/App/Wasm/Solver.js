@@ -1,4 +1,3 @@
-import { AbortLock } from "wasm";
 import __wbg_init, * as Wasm from "wasm_sudoku_solver";
 
 export const convert_hint = f => hint => {
@@ -16,7 +15,7 @@ const async_with_lock = function (wasm_function) {
     let canceler = undefined;
     __wbg_init().then(w => {
       if (lock === undefined) {
-        lock = Wasm.prepare();
+        lock = Wasm.AbortLock.prepare();
         let res = wasm_function(lock);
         if (canceler === undefined) {
           onSuccess(res);
