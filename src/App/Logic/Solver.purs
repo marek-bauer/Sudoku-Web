@@ -2,7 +2,8 @@ module App.Logic.Solver where
 
 import Prelude
 
-import App.Data.Sudoku.Board (Board, Field(..), Position, Value(..), getBoxSize, getSize, getSudokuByRows, peekAt, setAt)
+import App.Data.Sudoku.Board (Board, Position, getBoxSize, getSize, getSudokuByRows, peekAt, setAt)
+import App.Data.Sudoku.Field (Field(..), Value(..))
 import App.Utils.Array (withIndex)
 import Data.Array (range)
 import Data.Foldable (foldl)

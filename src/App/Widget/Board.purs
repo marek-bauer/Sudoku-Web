@@ -1,29 +1,28 @@
 -- | Widget for displaying sudoku board 
-module App.Widget.Board 
-  ( component
-  , Output
-  , Input
+module App.Widget.Board
+  ( Input
+  , Output(..)
   , State(..)
+  , component
   )
-where
+  where
 
 import Prelude
 
+import App.Data.Sudoku.Board (Position)
 import App.Data.Sudoku.Board as Board
+import App.Data.Sudoku.Field (Field(..), Value(..), stringToValue)
 import App.Utils.Array (withIndex)
-import Data.Array (length, range, singleton, zip)
-import Data.Maybe (Maybe(..), maybe)
-import Data.Profunctor.Strong (fanout)
+import App.Utils.Event (eventKey)
+import Data.Array (singleton)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
-import Effect (Effect)
-import Effect.Class (class MonadEffect, liftEffect)
-import Effect.Console as Console
-import Halogen (ClassName(..), liftEffect)
+import Halogen (ClassName(..))
 import Halogen as H
-import Halogen.Aff (awaitBody, runHalogenAff)
-import Halogen.HTML (map_)
+import Halogen.HTML (IProp, prop)
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
+import Halogen.HTML.Properties (InputType(..))
 import Halogen.HTML.Properties as HP
 
 type State = {
@@ -34,10 +33,11 @@ type Input = State
 
 data Output 
   = SelectionChanged (Maybe Board.Position)
+  | ValueInserted Board.Position Value
 
 data Action
   = SelectionChange (Maybe Board.Position)
-  | ValueInserted Board.Position String
+  | ValueInsert Board.Position String
   | Refresh Input
 
 component :: forall q m. H.Component q Input Output m
@@ -69,19 +69,20 @@ render state =
         | i `mod` boxSize == boxSize - 1 = BoxBorder
         | otherwise = NormalBorder
 
-      displayBoard :: forall w. Array (Array Board.Field) -> Array (HH.HTML w Action)
-      displayBoard = map (\(Tuple index row) -> displayRow (borderForIndex index) row) <<< withIndex
+      displayBoard :: forall w. Array (Array Field) -> Array (HH.HTML w Action)
+      displayBoard = map (\(Tuple y row) -> displayRow y row) <<< withIndex
 
-      displayRow :: forall w. BorderType -> Array Board.Field -> HH.HTML w Action
-      displayRow rowBorder = HH.tr_ <<< map (\(Tuple index f) -> displayField rowBorder (borderForIndex index) f) <<< withIndex
+      displayRow :: forall w. Int -> Array Field -> HH.HTML w Action
+      displayRow y = HH.tr_ <<< map (\(Tuple x f) -> displayField { x, y } f) <<< withIndex
 
-      displayField :: forall w. BorderType -> BorderType -> Board.Field -> HH.HTML w Action
-      displayField rowBorder columnBorder = HH.td [HP.style borderString] <<< singleton <<< case _ of
-        Board.Empty -> HH.input [HP.value ""]
-        Board.UserInput i -> HH.input [HP.value <<< show $ i]
-        Board.Given i -> HH.text <<< show $ i
+      displayField :: forall w. Position -> Field -> HH.HTML w Action
+      displayField pos = HH.td [HP.style borderString] <<< singleton <<< case _ of
+        Empty -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), maxLength 0, HP.type_ InputText]
+        UserInput i -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), HP.value <<< show $ i, maxLength 1, HP.type_ InputText]
+        Given i -> HH.text <<< show $ i
         where
-          borderString = getBorderStyle "bottom" rowBorder <> getBorderStyle "right" columnBorder
+          borderString = getBorderStyle "bottom" (borderForIndex pos.y) 
+            <> getBorderStyle "right" (borderForIndex pos.x)
       
       getBorderStyle :: String -> BorderType -> String
       getBorderStyle side borderType = "border-" <> side <> case borderType of
@@ -89,8 +90,11 @@ render state =
         BoxBorder -> ": solid 3px blue;"
         NoBorder -> ": 0px;"
 
+      maxLength :: forall r i. Int -> IProp (maxLength :: Int | r) i
+      maxLength = prop (H.PropName "maxLength")
 
 handleAction :: forall cs m. Action -> H.HalogenM State Action cs Output m Unit
 handleAction = case _ of
-  _ -> pure unit
-
+  SelectionChange pos -> H.raise $ SelectionChanged pos
+  ValueInsert pos val -> H.raise $ ValueInserted pos $ fromMaybe (Value 0) $ stringToValue val
+  Refresh input -> H.modify_ (const input)

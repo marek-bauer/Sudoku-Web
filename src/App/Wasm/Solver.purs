@@ -8,6 +8,7 @@ module App.Wasm.Solver
 import Prelude
 
 import App.Data.Sudoku.Board (Board, getBoxSize, loadBoard, saveBoard)
+import App.Data.Sudoku.Field (Value(..))
 import App.Data.Sudoku.Hint (Hint)
 import App.Utils.Hoist (hoistMaybe)
 import App.Utils.Undefinedtable (Undefinedtable, toMaybe)
@@ -35,7 +36,7 @@ getHint board maxLevel = do
   let size = getBoxSize board
   input_str <- hoistMaybe $ saveBoard board
   hint <- MaybeT <<< map toMaybe <<< fromEffectFnAff $ wasm_get_hint input_str size maxLevel
-  pure $ convert_hint (\x y digit level -> { position: { x, y }, digit, level }) hint
+  pure $ convert_hint (\x y d level -> { position: { x, y }, digit: Value d, level }) hint
 
 getAllSolutions :: Board -> MaybeT Aff (Array Board)
 getAllSolutions board = do

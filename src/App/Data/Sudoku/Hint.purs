@@ -3,9 +3,10 @@ module App.Data.Sudoku.Hint
 where
 
 import App.Data.Sudoku.Board (Position)
+import App.Data.Sudoku.Field (Value)
   
 type Hint =
   { position :: Position
-  , digit    :: Int
+  , digit    :: Value
   , level    :: Int
   }

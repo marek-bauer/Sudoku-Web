@@ -2,7 +2,8 @@ module App.Logic.Generator where
 
 import Prelude
 
-import App.Data.Sudoku.Board (Board, Field(..), Value(..), getEmptyBoard, getSize, setAt)
+import App.Data.Sudoku.Board (Board, getEmptyBoard, getSize, setAt)
+import App.Data.Sudoku.Field (Field(..), Value(..))
 import App.Utils.RandomMonad (class RandomMonad, randomPermutationRange)
 import Data.Array (foldl, foldM, zip, range)
 import Data.Tuple (Tuple(..))
