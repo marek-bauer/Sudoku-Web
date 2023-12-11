@@ -11,11 +11,14 @@ import Prelude
 
 import App.Data.Sudoku.Board (Position)
 import App.Data.Sudoku.Board as Board
+import App.Data.Sudoku.Error (Error)
 import App.Data.Sudoku.Field (Field(..), Value(..), stringToValue)
+import App.Logic.Error (errorsToInvalidField)
 import App.Utils.Array (withIndex)
 import App.Utils.Event (eventKey)
 import Data.Array (singleton)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Set as Set
 import Data.Tuple (Tuple(..))
 import Halogen (ClassName(..))
 import Halogen as H
@@ -25,9 +28,10 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties (InputType(..))
 import Halogen.HTML.Properties as HP
 
-type State = {
-  board :: Board.Board
-}
+type State = 
+  { board  :: Board.Board
+  , errors :: Array Error
+  }
 
 type Input = State
 
@@ -63,6 +67,9 @@ render state =
       boardSize = Board.getSize state.board
       sudokuBoard = Board.getSudokuByRows state.board
 
+      redFields :: Set.Set Position
+      redFields = errorsToInvalidField boxSize state.errors
+
       borderForIndex :: Int -> BorderType
       borderForIndex i 
         | i == boardSize - 1 = NoBorder
@@ -76,13 +83,14 @@ render state =
       displayRow y = HH.tr_ <<< map (\(Tuple x f) -> displayField { x, y } f) <<< withIndex
 
       displayField :: forall w. Position -> Field -> HH.HTML w Action
-      displayField pos = HH.td [HP.style borderString] <<< singleton <<< case _ of
+      displayField pos = HH.td [HP.style style] <<< singleton <<< case _ of
         Empty -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), maxLength 0, HP.type_ InputText]
         UserInput i -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), HP.value <<< show $ i, maxLength 1, HP.type_ InputText]
         Given i -> HH.text <<< show $ i
         where
-          borderString = getBorderStyle "bottom" (borderForIndex pos.y) 
+          style = getBorderStyle "bottom" (borderForIndex pos.y) 
             <> getBorderStyle "right" (borderForIndex pos.x)
+            <> if Set.member pos redFields then "background-color: red;" else ""
       
       getBorderStyle :: String -> BorderType -> String
       getBorderStyle side borderType = "border-" <> side <> case borderType of

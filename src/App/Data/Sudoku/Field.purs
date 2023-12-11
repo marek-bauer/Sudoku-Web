@@ -7,6 +7,7 @@ module App.Data.Sudoku.Field
   , valueToChar
   , valueToGiven
   , valueToUserInput
+  , fieldToValue
   )
   where
 
@@ -65,3 +66,9 @@ fieldToChar = case _ of
   Empty -> Just ' '
   Given v -> valueToChar v
   UserInput v -> valueToChar v
+
+fieldToValue :: Field -> Maybe Value
+fieldToValue = case _ of
+  Empty -> Nothing
+  Given v -> Just v
+  UserInput v -> Just v

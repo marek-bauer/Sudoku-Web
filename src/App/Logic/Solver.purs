@@ -2,9 +2,9 @@ module App.Logic.Solver where
 
 import Prelude
 
-import App.Data.Sudoku.Board (Board, Position, getBoxSize, getSize, getSudokuByRows, peekAt, setAt)
+import App.Data.Sudoku.Board (Board, Position, getBoxSize, getSize, setAt)
 import App.Data.Sudoku.Field (Field(..), Value(..))
-import App.Utils.Array (withIndex)
+import App.Logic.BoardFolds (foldBoard, foldBox, foldColumn, foldRow)
 import Data.Array (range)
 import Data.Foldable (foldl)
 import Data.Maybe (Maybe(..))
@@ -32,24 +32,6 @@ solveSudoku sudoku = if isFull then Just sudoku else do
 
     optionSet :: Set.Set Value
     optionSet = Set.fromFoldable <<< map Value $ range 1 size
-
-    foldBoard :: forall a. (a -> Position -> Field -> a) -> a -> Board -> a
-    foldBoard f init board 
-      = foldl 
-          (\prev (Tuple y row) -> foldl (\prev' (Tuple x field) -> f prev' { x, y } field) prev (withIndex row) ) 
-          init $ withIndex (getSudokuByRows board)
-
-    foldSection :: forall a. Partial => (Int -> Position) -> (a -> Field -> a) -> a -> Board -> a
-    foldSection selector f init board = foldl (\prev index -> f prev $ peekAt (selector index) board) init (range 0 (size - 1))
-
-    foldColumn :: forall a. Partial => Int -> (a -> Field -> a) -> a -> Board -> a
-    foldColumn col = foldSection (\y -> {x: col, y})
-
-    foldRow :: forall a. Partial => Int -> (a -> Field -> a) -> a -> Board -> a 
-    foldRow row = foldSection (\x -> {x, y: row})
-
-    foldBox :: forall a. Partial => Int -> Int -> (a -> Field -> a) -> a -> Board -> a 
-    foldBox xBox yBox = foldSection (\i -> {x: xBox * boxSize + i `mod` boxSize, y: yBox * boxSize + i `div` boxSize})
 
     posWithLeastOptions :: Maybe (Tuple Position (Set.Set Value))
     posWithLeastOptions = unsafePartial $ foldBoard go Nothing sudoku

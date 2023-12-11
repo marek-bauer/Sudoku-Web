@@ -10,7 +10,9 @@ module App.Widget.FreeGame
 import Prelude
 
 import App.Data.Sudoku.Board (Board, getEmptyBoard, setAt)
+import App.Data.Sudoku.Error (Error)
 import App.Data.Sudoku.Field (valueToUserInput)
+import App.Logic.Error (calcErrors)
 import App.Wasm.Solver (solveSudoku, getHint)
 import App.Widget.Board as BoardWidget
 import Control.Monad.Maybe.Trans (runMaybeT)
@@ -46,7 +48,7 @@ component =
 render :: forall m. State -> H.ComponentHTML Action Slots m
 render state =
   HH.div_
-    [ HH.slot _board unit BoardWidget.component { board: state.board } HandleBoard
+    [ HH.slot _board unit BoardWidget.component { board: state.board, errors } HandleBoard
     , HH.div_
       [ HH.button 
           [ HE.onClick \_ -> Solve ] 
@@ -56,6 +58,9 @@ render state =
           [ HH.text "Get hint" ]
       ]
     ]
+  where
+    errors :: Array Error
+    errors = calcErrors state.board
 
 handleAction :: forall m o. MonadEffect m => MonadAff m => Action -> H.HalogenM State Action Slots o m Unit
 handleAction = case _ of
