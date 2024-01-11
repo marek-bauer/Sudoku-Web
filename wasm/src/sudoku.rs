@@ -107,6 +107,17 @@ impl Sudoku {
     self
   }
 
+  pub fn filled_spaces(&self) -> usize {
+    self.iter().filter(|(v, _)| *v != 0).count()
+  }
+
+  pub fn get_nth_filled_space(&self, nth: usize) -> Option<Position> {
+    self.iter()
+      .filter(|(v, _)| *v != 0)
+      .map(|(_, p)| p)
+      .nth(nth)
+  }
+
   pub fn is_solved(&self) -> bool {
     let all_rows_correct = (0 .. self.board_size())
       .all(|y| self.used_in_row(y).size() == self.board_size() as u8);

@@ -4,6 +4,7 @@ pub mod solver;
 pub mod flags;
 pub mod matching;
 pub mod abort_lock;
+pub mod generator;
 
 use solver::*;
 use sudoku::Sudoku;
