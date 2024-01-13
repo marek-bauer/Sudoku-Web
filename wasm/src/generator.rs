@@ -8,6 +8,35 @@ use crate::solver::*;
 use crate::abort_lock::*;
 use crate::sudoku::Sudoku;
 use rand::*;
+use wasm_bindgen::prelude::wasm_bindgen;
+
+#[derive(Clone)]
+#[wasm_bindgen]
+pub struct Puzzle {
+  puzzle: Sudoku,
+  solution: Sudoku,
+  size: u8,
+  difficulty: u32
+}
+
+#[wasm_bindgen]
+impl Puzzle {
+  pub fn get_puzzle(&self) -> String {
+    self.puzzle.save()
+  }
+
+  pub fn get_solution(&self) -> String {
+    self.solution.save()
+  }
+
+  pub fn get_size(&self) -> u8 {
+    self.size
+  }
+
+  pub fn get_difficulty(&self) -> u32 {
+    self.difficulty
+  }
+}
 
 fn has_unique_solution(sudoku: Sudoku) -> bool {
   solution_iter(sudoku, &AbortLock::prepare())
@@ -35,10 +64,10 @@ fn solvable_by_hints(mut sudoku: Sudoku, max_level: u8) -> Option<u32> {
   }
 }
 
-fn prepare_sudoku_game(sudoku: Sudoku, min_difficulty: u32, max_difficult: u32, hint_level: u8, fuel: i32) -> Result<(Sudoku, u32, i32), i32> {
+pub fn prepare_sudoku_game(sudoku: Sudoku, min_difficulty: u32, max_difficult: u32, hint_level: u8, fuel: i32) -> Result<(Sudoku, u32), i32> {
   let difficulty =  solvable_by_hints(sudoku.clone(), hint_level);
   if difficulty.is_some_and(|d| min_difficulty <= d && d <= max_difficult) {
-    return Ok((sudoku, difficulty.unwrap(), fuel));
+    return Ok((sudoku, difficulty.unwrap()));
   } else if difficulty.is_none() {
     return Err(1);
   } else if fuel <= 0 {
@@ -69,7 +98,7 @@ fn random_permutation(size: u8) -> Vec<u8> {
   result
 }
 
-fn random_sudoku_filled_diagonal(size: u8) -> Sudoku {
+pub fn random_sudoku_filled_diagonal(size: u8) -> Sudoku {
   let mut sudoku = Sudoku::empty(size);
   for i in 0 .. size {
     let mut random_values = random_permutation(size * size).into_iter();
@@ -81,11 +110,11 @@ fn random_sudoku_filled_diagonal(size: u8) -> Sudoku {
   sudoku
 }
 
-pub fn generate_sudoku(size: u8, min_difficulty: u32, max_difficult: u32, hint_level: u8, fuel: u32) -> Option<(Sudoku, u32, i32)> {
+pub fn generate_sudoku(size: u8, min_difficulty: u32, max_difficult: u32, hint_level: u8, fuel: u32) -> Option<Puzzle> {
   let diagonal_filled_sudoku = random_sudoku_filled_diagonal(size);
   let solved_sudoku = solution(diagonal_filled_sudoku, &AbortLock::prepare())?;
-  match prepare_sudoku_game(solved_sudoku, min_difficulty, max_difficult, hint_level, fuel as i32) {
-    Ok((game, difficulty, remaining_fuel)) => Some((game, difficulty, fuel as i32 - remaining_fuel)),
+  match prepare_sudoku_game(solved_sudoku.clone(), min_difficulty, max_difficult, hint_level, fuel as i32) {
+    Ok((puzzle, difficulty)) => Some(Puzzle { puzzle, solution: solved_sudoku, size, difficulty }),
     Err(_) => None
   }
 }
@@ -96,11 +125,9 @@ mod test {
 
   #[test]
   fn test1() {
-    let gen = generate_sudoku(3, 150,  200, 2, 200);
-    let (s, difficulty, used_fuel) = gen.unwrap();
-    println!("Difficulty {}", difficulty);
-    println!("Used fuel {}", used_fuel);
-    println!("{}", s)
+    let puzzle = generate_sudoku(3, 150,  200, 2, 200).unwrap();
+    println!("Difficulty {}", puzzle.difficulty);
+    println!("{}", puzzle.puzzle)
   }
 }
 

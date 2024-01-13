@@ -6,10 +6,12 @@ pub mod matching;
 pub mod abort_lock;
 pub mod generator;
 
+use generator::Puzzle;
 use solver::*;
 use sudoku::Sudoku;
 use wasm_bindgen::prelude::*;
 use abort_lock::AbortLock;
+use generator::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -59,6 +61,11 @@ pub fn get_all_solutions(sudoku_str: &str, size: u8, lock: &AbortLock) -> Option
   } else {
     None
   }
+}
+
+#[wasm_bindgen]
+pub fn generate_random_sudoku(size: u8, min_difficulty: u32, max_difficult: u32, hint_level: u8, fuel: u32) -> Option<Puzzle> {
+  generate_sudoku(size, min_difficulty, max_difficult, hint_level, fuel)
 }
 
 #[derive(Clone)]
