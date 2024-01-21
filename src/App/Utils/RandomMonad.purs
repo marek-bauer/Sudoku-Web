@@ -10,14 +10,15 @@ import Prelude
 import App.Utils.Array (swap)
 import Data.Array (range, foldM)
 import Effect (Effect)
+import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Random as RandEff
 import Partial.Unsafe (unsafePartial)
 
 class Monad m <= RandomMonad m where
   randomInt :: Int -> Int -> m Int
 
-instance RandomMonad Effect where
-  randomInt = RandEff.randomInt
+instance MonadEffect m => RandomMonad m where
+  randomInt = \l h -> liftEffect $ RandEff.randomInt l h
 
 randomPermutationRange :: forall m. RandomMonad m => Int -> m (Array Int)
 randomPermutationRange len =

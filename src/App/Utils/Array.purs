@@ -5,10 +5,11 @@ module App.Utils.Array
   , withIndex
   )
   where
+
 import Prelude
 
-import Data.Tuple (Tuple)
 import Data.Array (zip, range, length)
+import Data.Tuple (Tuple)
   
 foreign import _swap :: forall a. Int -> Int -> Array a -> Array a
 foreign import _get :: forall a. Int -> Array a -> a

@@ -9,6 +9,7 @@ package:
     - prelude
     - random
     - react
+    - web-storage
   name: sudoku
   test:
     dependencies: []

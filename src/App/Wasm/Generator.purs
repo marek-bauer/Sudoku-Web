@@ -19,12 +19,12 @@ foreign import generate_sudoku :: Int -> Int -> Int -> Int -> Int-> EffectFnAff 
 foreign import convert_puzzle :: forall a. (String -> String -> Int -> Int -> a) -> PuzzleWasm -> a
 
 
-generateSudoku :: Int -> Int -> Int -> Int -> Int -> MaybeT Aff Puzzle
-generateSudoku size minDifficulty maxDifficulty maxHintLevel fuel = do 
+generateSudoku :: {size :: Int, minDifficulty :: Int, maxDifficulty :: Int, maxHintLevel :: Int, fuel :: Int} -> MaybeT Aff Puzzle
+generateSudoku r = do 
   wasm_puzzle <- MaybeT 
     <<< map toMaybe
     <<< fromEffectFnAff 
-    $ generate_sudoku size minDifficulty maxDifficulty maxHintLevel fuel
+    $ generate_sudoku r.size r.minDifficulty r.maxDifficulty r.maxHintLevel r.fuel
   hoistMaybe $ convert_puzzle converse wasm_puzzle
   where
     converse :: String -> String -> Int -> Int -> Maybe Puzzle
