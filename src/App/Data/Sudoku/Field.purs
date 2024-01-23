@@ -3,11 +3,12 @@ module App.Data.Sudoku.Field
   , Value(..)
   , charToValue
   , fieldToChar
+  , fieldToValue
   , stringToValue
+  , unValue
   , valueToChar
   , valueToGiven
   , valueToUserInput
-  , fieldToValue
   )
   where
 
@@ -33,6 +34,9 @@ stringToValue :: String -> Maybe Value
 stringToValue str = case toCharArray str of 
   [c] -> charToValue c
   _ -> Nothing
+
+unValue :: Value -> Int 
+unValue (Value v) = v
 
 charToValue :: Char -> Maybe Value
 charToValue c = case toCharCode c of

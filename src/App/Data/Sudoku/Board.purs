@@ -2,6 +2,7 @@
 module App.Data.Sudoku.Board
   ( Board
   , Position
+  , Size(..)
   , getBoxSize
   , getEmptyBoard
   , getSize
@@ -10,6 +11,7 @@ module App.Data.Sudoku.Board
   , peekAt
   , saveBoard
   , setAt
+  , toRowSize
   )
   where
 
@@ -27,12 +29,16 @@ import Data.String.CodeUnits (fromCharArray, toCharArray)
 import Data.Traversable (traverse)
 
 type Position = { x :: Int, y :: Int }
+newtype Size = Size Int
 
 data Board  =  
   Board
   { size :: Int
   , sudoku :: Array (Array Field)
   }
+
+toRowSize :: Size -> Int 
+toRowSize (Size s) = s * s
 
 getSize :: Board -> Int
 getSize (Board b) = b.size * b.size

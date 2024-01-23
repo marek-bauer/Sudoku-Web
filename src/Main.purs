@@ -4,10 +4,13 @@ import Prelude
 
 import App.Controller.PuzzleController as PuzzleController
 import App.Data.Puzzle (savePuzzle)
+import App.Data.Sudoku.Board (Size(..))
+import App.Data.Sudoku.Field (Value(..))
 import App.Wasm.Generator (generateSudoku)
 import App.Widget.FreeGame as Game
+import App.Widget.Keyboard as Keyboard
 import Control.Monad.Maybe.Trans (runMaybeT)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
@@ -23,4 +26,4 @@ main = do
     body <- HA.awaitBody
     w <- liftEffect $ window
     storage <- liftEffect $ localStorage w
-    runUI PuzzleController.controller {localStorage: storage, size: 3} body
+    runUI Keyboard.component {selected: Value 0, size: Size 4} body
