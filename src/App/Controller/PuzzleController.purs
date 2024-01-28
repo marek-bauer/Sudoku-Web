@@ -167,7 +167,7 @@ handleAction = case _ of
       saveUsagesInStorage diff usages
     handleAction TickManager
   GeneratePuzzle difficulty index sleep -> do
-    liftEffect $ log $ "Generating " <> show difficulty <> " " <> show index <> " " <> show sleep
+    log $ "Generating " <> show difficulty <> " " <> show index <> " " <> show sleep
     { generationInProgress } <- H.get
     { size } <- H.gets (\s -> s.input)
     unless generationInProgress $ do
@@ -180,7 +180,7 @@ handleAction = case _ of
           H.modify_ \s -> s { generationInProgress = false }
           handleAction $ GeneratePuzzle difficulty index 5
   GeneratedPuzzle difficulty index puzzle -> do
-    liftEffect $ log $ "Genetated"
+    log $ "Genetated"
     H.modify_ \s -> s { generationInProgress = false }
     eSaved <- runExceptT $ do
       puzzleStr <- except $ note (Error "Generated invalid puzzle" ) $ savePuzzle puzzle
@@ -224,8 +224,8 @@ handleAction = case _ of
   where
     handleMsg :: forall n. MonadEffect n => Msg -> n Unit
     handleMsg = case _ of 
-      Error err -> liftEffect $ error err
-      Info info -> liftEffect $ log info
+      Error err -> error err
+      Info info -> log info
 
     scoreToDelay :: Int -> Int
     scoreToDelay x = 1000 / (x + 1) 
