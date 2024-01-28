@@ -2,14 +2,14 @@ module App.Utils.RandomMonad
   ( class RandomMonad
   , randomInt
   , randomPermutationRange
+  , randomEntry
   )
   where
 
 import Prelude
 
-import App.Utils.Array (swap)
-import Data.Array (range, foldM)
-import Effect (Effect)
+import App.Utils.Array (get, swap)
+import Data.Array (foldM, length, range)
 import Effect.Class (class MonadEffect, liftEffect)
 import Effect.Random as RandEff
 import Partial.Unsafe (unsafePartial)
@@ -31,3 +31,11 @@ randomPermutationRange len =
     applySwap prev index = do
       posSwitch <- randomInt index (len - 1)
       pure <<< unsafePartial $ swap index posSwitch prev
+
+randomEntry :: forall m a. RandomMonad m => (Array a) -> m a
+randomEntry array = do 
+  index <- randomInt 0 (len - 1)
+  pure $ unsafePartial $ get index array
+  where
+    len = length array
+
