@@ -10,6 +10,7 @@ import Prelude
 import App.Data.DefaultPuzzles (getDefaultPuzzles)
 import App.Data.Difficulty (Difficulty(..), allDiffuculties)
 import App.Data.Puzzle (Puzzle, loadPuzzle, savePuzzle)
+import App.Data.Sudoku.Board (Size(..))
 import App.Data.Usage (Usage(..), getAvailable, parseUsages, saveUsages)
 import App.Utils.Array (withIndex)
 import App.Utils.Hoist (hoistMaybe)
@@ -48,8 +49,8 @@ type SearchParameters =
   , size          :: Int
   }
 
-difficultySearch :: Int -> Difficulty -> SearchParameters
-difficultySearch size = case _ of
+difficultySearch :: Size -> Difficulty -> SearchParameters
+difficultySearch (Size size) = case _ of
   Easy      -> {minDifficulty: halfSize, maxDifficulty: fieldSize, maxHintLevel: 0, fuel: fieldSize, size}
   Medium    -> {minDifficulty: fieldSize, maxDifficulty: fieldSize + halfSize, maxHintLevel: 1, fuel: 2 * fieldSize, size}
   Hard      -> {minDifficulty: fieldSize + halfSize, maxDifficulty: 2 * fieldSize, maxHintLevel: 2, fuel: 3 * fieldSize, size}
@@ -60,7 +61,7 @@ difficultySearch size = case _ of
 
 type Input =
   { localStorage :: Storage
-  , size :: Int
+  , size :: Size
   }
 
 type State = 
@@ -196,21 +197,7 @@ handleAction = case _ of
     case eSaved of 
       Right _ -> handleAction TickManager
       Left msg -> handleMsg msg
-    -- case savePuzzle puzzle of 
-    --   Just puzzleStr -> do
-    --     savePuzzleInStorage difficulty index puzzleStr
-    --     mUsageArray <- H.gets (\x -> lookup difficulty x.usage)
-    --     let usage = do 
-    --           usageArray :: Array Usage <- mUsageArray
-    --           runPartial (unsafeUpdateAt index (Used 0)) usageArray
-    --     case usage of 
-    --       Nothing -> liftEffect $ error "Could not update usage array"
-    --       Just u -> saveUsagesInStorage difficulty u
-    --     H.modify_ \s -> s { providedPuzzle = if providedPuzzle s == Just (Tuple difficulty index) 
-    --                                          then Nothing 
-    --                                          else providedPuzzle s 
-    --                       }
-    --   Nothing -> liftEffect $ error "Generated invalid puzzle" 
+
   TickManager -> do
     { usage } <- H.get
     let ePuzzleToCompute = do  
@@ -276,19 +263,19 @@ handleAction = case _ of
 getStorage :: forall n. MonadState State n => n Storage
 getStorage = (\{input} -> input.localStorage) <$> H.get
 
-getSize :: forall n. MonadState State n => n Int
+getSize :: forall n. MonadState State n => n Size
 getSize = (\{input} -> input.size) <$> H.get
 
-puzzleUsageRecordName :: Int -> Difficulty -> String
+puzzleUsageRecordName :: Size -> Difficulty -> String
 puzzleUsageRecordName size diff = "Puzzle_usage_" <> show size <> "_" <> show diff
 
-puzzleRecordName ::  Int -> Difficulty -> Int -> String
+puzzleRecordName ::  Size -> Difficulty -> Int -> String
 puzzleRecordName size diff index = "Puzzle_" <> show size <> "_" <> show diff <> "_" <> show index
 
 getIndexes :: Array Boolean -> Array Int  
 getIndexes = foldMap (\(Tuple i p) -> if p then [i] else [])  <<< withIndex
 
-setUsageList ::  forall n. (MonadEffect n) => Storage -> Int -> Difficulty -> Array Usage -> n Unit
+setUsageList ::  forall n. (MonadEffect n) => Storage -> Size -> Difficulty -> Array Usage -> n Unit
 setUsageList storage size diff usage = do 
   let usageStr = saveUsages usage
   let recordName = puzzleUsageRecordName size diff

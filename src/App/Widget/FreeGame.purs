@@ -9,7 +9,7 @@ module App.Widget.FreeGame
 
 import Prelude
 
-import App.Data.Sudoku.Board (Board, getEmptyBoard, setAt)
+import App.Data.Sudoku.Board (Board, Size(..), getEmptyBoard, setAt)
 import App.Data.Sudoku.Error (Error)
 import App.Data.Sudoku.Field (valueToUserInput)
 import App.Logic.Error (calcErrors)
@@ -33,14 +33,14 @@ data Action
   | Solve 
   | Hint
 
-type Slots = (board :: forall query. H.Slot query BoardWidget.Output Unit)
+type Slots = (board :: H.Slot BoardWidget.Query BoardWidget.Output Unit)
 _board = Proxy :: Proxy "board"
 
 
 component :: forall q m i o. MonadEffect m => MonadAff m => H.Component q i o m
 component =
   H.mkComponent
-    { initialState: \_ -> { board: getEmptyBoard 3 }
+    { initialState: \_ -> { board: getEmptyBoard (Size 3) }
     , render
     , eval: H.mkEval H.defaultEval { handleAction = handleAction }
     }
@@ -48,7 +48,7 @@ component =
 render :: forall m. State -> H.ComponentHTML Action Slots m
 render state =
   HH.div_
-    [ HH.slot _board unit BoardWidget.component { board: state.board, errors } HandleBoard
+    [ HH.slot _board unit BoardWidget.component { board: state.board, errors, solved: false } HandleBoard
     , HH.div_
       [ HH.button 
           [ HE.onClick \_ -> Solve ] 

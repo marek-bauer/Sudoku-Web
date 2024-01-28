@@ -2,17 +2,18 @@ module App.Logic.Generator where
 
 import Prelude
 
-import App.Data.Sudoku.Board (Board, getEmptyBoard, getSize, setAt)
+import App.Data.Sudoku.Board (Board, Size, getEmptyBoard, getSize, setAt, unSize)
 import App.Data.Sudoku.Field (Field(..), Value(..))
 import App.Utils.RandomMonad (class RandomMonad, randomPermutationRange)
 import Data.Array (foldl, foldM, zip, range)
 import Data.Tuple (Tuple(..))
 import Partial.Unsafe (unsafePartial)
 
-getFilledDiagonal :: forall m. RandomMonad m => Int -> m Board
-getFilledDiagonal boxSize = unsafePartial $ foldM fillRandDiagBox emptyBoard (range 0 (boxSize - 1))
+getFilledDiagonal :: forall m. RandomMonad m => Size -> m Board
+getFilledDiagonal s = unsafePartial $ foldM fillRandDiagBox emptyBoard (range 0 (boxSize - 1))
   where
-    emptyBoard = getEmptyBoard boxSize
+    boxSize = unSize s
+    emptyBoard = getEmptyBoard s
     size = getSize emptyBoard
     sizeRange = range 0 (size - 1)
 

@@ -7,11 +7,13 @@ module App.Data.Sudoku.Board
   , getEmptyBoard
   , getSize
   , getSudokuByRows
+  , isComplete
   , loadBoard
   , peekAt
   , saveBoard
   , setAt
   , toRowSize
+  , unSize
   )
   where
 
@@ -19,7 +21,7 @@ import Prelude
 
 import App.Data.Sudoku.Field (charToValue, valueToGiven, fieldToChar, Field(..))
 import App.Utils.Array (chunks, get)
-import Data.Array (concat, range)
+import Data.Array (all, concat, range)
 import Data.Array.Extra.Unsafe (unsafeModifyAt, unsafeUpdateAt)
 import Data.Int (fromNumber, toNumber)
 import Data.Maybe (Maybe)
@@ -31,9 +33,14 @@ import Data.Traversable (traverse)
 type Position = { x :: Int, y :: Int }
 newtype Size = Size Int
 
-data Board  =  
-  Board
-  { size :: Int
+unSize :: Size -> Int 
+unSize (Size s) = s
+
+instance sizeShow :: Show Size where
+  show (Size s) = show s
+
+type Board = 
+  { size   :: Size
   , sudoku :: Array (Array Field)
   }
 
@@ -41,33 +48,36 @@ toRowSize :: Size -> Int
 toRowSize (Size s) = s * s
 
 getSize :: Board -> Int
-getSize (Board b) = b.size * b.size
+getSize b = toRowSize b.size
 
 getBoxSize :: Board -> Int
-getBoxSize (Board b) = b.size
+getBoxSize b = unSize b.size
 
 getSudokuByRows :: Board -> Array (Array Field)
-getSudokuByRows (Board b) = b.sudoku
+getSudokuByRows b = b.sudoku
 
-getEmptyBoard :: Int -> Board
+getEmptyBoard :: Size -> Board
 getEmptyBoard size = 
-  Board { size, sudoku: map (\_ -> map (const Empty) boardRange) boardRange}
+  { size, sudoku: map (\_ -> map (const Empty) boardRange) boardRange}
   where
-    boardSize = size * size
+    boardSize = toRowSize size * toRowSize size
     boardRange = range 0 (boardSize - 1)
 
 updateSudoku :: (Array (Array Field) -> Array (Array Field)) -> Board -> Board
-updateSudoku f (Board board) = Board board {sudoku = f board.sudoku}
+updateSudoku f board = board {sudoku = f board.sudoku}
 
 setAt :: Partial => Position -> Field -> Board -> Board
 setAt pos field = 
   updateSudoku $ unsafeModifyAt pos.y (\r -> unsafeUpdateAt pos.x field r)
 
 peekAt :: Partial => Position -> Board -> Field
-peekAt pos (Board board) = get pos.x $ get pos.y board.sudoku
+peekAt pos board = get pos.x $ get pos.y board.sudoku
+
+isComplete :: Board -> Boolean
+isComplete board = all (\row -> all (_ /= Empty) row) board.sudoku
 
 saveBoard :: Board -> Maybe String
-saveBoard (Board b) 
+saveBoard b 
   = map fromCharArray 
   <<< traverse fieldToChar
   $ concat b.sudoku    
@@ -77,4 +87,4 @@ loadBoard str = do
   size <- fromNumber <<< sqrt <<< sqrt <<< toNumber <<< length $ str
   sudoku_data <- traverse (map valueToGiven <<< charToValue)  $ toCharArray str
   let sudoku = chunks (size * size) sudoku_data
-  pure $ Board { size, sudoku }
+  pure $ { size: Size size, sudoku }

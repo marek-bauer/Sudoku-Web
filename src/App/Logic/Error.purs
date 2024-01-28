@@ -53,8 +53,8 @@ calcErrors board
     -- Nothing means there was duplicate
     checkDuplicates :: Field -> Maybe (Set Int) -> Maybe (Set Int)
     checkDuplicates field s = case fieldToValue field of
-      Nothing -> s
-      Just (Value v) -> case s of
+      Value 0 -> s
+      Value v -> case s of
         Nothing -> Nothing
         Just set -> do 
           let { found, result } = insertAndLookupBy compare v set 

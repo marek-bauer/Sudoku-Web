@@ -4,6 +4,7 @@ module App.Data.Sudoku.Field
   , charToValue
   , fieldToChar
   , fieldToValue
+  , isEditable
   , stringToValue
   , unValue
   , valueToChar
@@ -29,6 +30,9 @@ instance Show Value where
     Nothing -> "#" 
 
 data Field = Empty | UserInput Value | Given Value
+
+derive instance Eq Field
+derive instance Ord Field
 
 stringToValue :: String -> Maybe Value
 stringToValue str = case toCharArray str of 
@@ -71,8 +75,12 @@ fieldToChar = case _ of
   Given v -> valueToChar v
   UserInput v -> valueToChar v
 
-fieldToValue :: Field -> Maybe Value
+fieldToValue :: Field -> Value
 fieldToValue = case _ of
-  Empty -> Nothing
-  Given v -> Just v
-  UserInput v -> Just v
+  Empty -> Value 0
+  Given v -> v
+  UserInput v -> v
+
+isEditable :: Field -> Boolean
+isEditable (Given _) = false
+isEditable _ = true
