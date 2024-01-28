@@ -13,7 +13,7 @@ import App.Data.Puzzle (Puzzle)
 import App.Data.Sudoku.Board (Board, Position, Size, isComplete, peekAt, setAt)
 import App.Data.Sudoku.Error (Error, GameState(..))
 import App.Data.Sudoku.Field (Value(..), fieldToValue, valueToUserInput)
-import App.Logic.Difference (emptyDiffrances, filledDifferances)
+import App.Logic.Difference (emptyDifferances, filledDifferances)
 import App.Logic.Error (calcErrors)
 import App.Utils.Aff (withTimeout)
 import App.Utils.Partial (runPartial)
@@ -157,8 +157,8 @@ handleAction = case _ of
             Just hint -> pure hint
             Nothing -> do 
               emptyPositionsWithSolutions <- except 
-                $ note "emptyDiffrances error"
-                $ emptyDiffrances board solution
+                $ note "emptyDifferances error"
+                $ emptyDifferances board solution
               Tuple position value <- randomEntry emptyPositionsWithSolutions
               pure $ { position, digit: value, level: 4 }
         errors -> do 

@@ -1,5 +1,5 @@
 module App.Logic.Difference
-  ( emptyDiffrances
+  ( emptyDifferances
   , filledDifferances
   )
   where
@@ -7,7 +7,7 @@ module App.Logic.Difference
 import Prelude
 
 import App.Data.Sudoku.Board (Board, Position, peekAt)
-import App.Data.Sudoku.Field (Field(..), Value(..), fieldToValue)
+import App.Data.Sudoku.Field (Field(..), Value, fieldToValue)
 import App.Logic.BoardFolds (foldBoard)
 import App.Utils.Partial (runPartial)
 import Data.Array (cons)
@@ -32,8 +32,8 @@ filledDifferances :: Board -> Board -> Maybe (Array Position)
 filledDifferances b b' = runPartial (filledDifferances' b) b'
 
 -- | Findes all places that are empty, but solutuon have them filled 
-emptyDiffrances' :: Partial => Board -> Board -> Array (Tuple Position Value)
-emptyDiffrances' board solution = foldBoard checkEmpty [] board
+emptyDifferances' :: Partial => Board -> Board -> Array (Tuple Position Value)
+emptyDifferances' board solution = foldBoard checkEmpty [] board
   where
     checkEmpty :: Array (Tuple Position Value) -> Position -> Field -> Array (Tuple Position Value)
     checkEmpty prev pos field = case (Tuple field (peekAt pos solution)) of 
@@ -42,5 +42,5 @@ emptyDiffrances' board solution = foldBoard checkEmpty [] board
       _ -> prev
 
 -- | Findes all places that are empty, but solutuon have them filled 
-emptyDiffrances :: Board -> Board -> Maybe (Array (Tuple Position Value))
-emptyDiffrances board solution = runPartial (emptyDiffrances' board) solution
+emptyDifferances :: Board -> Board -> Maybe (Array (Tuple Position Value))
+emptyDifferances board solution = runPartial (emptyDifferances' board) solution
