@@ -1,84 +1,78 @@
 module App.Widget.FreeGame
-  ( Action(..)
-  , State
-  , _board
+  ( State'
+  , Query
   , component
-  , handleAction
   )
   where
 
 import Prelude
 
-import App.Data.Sudoku.Board (Board, Size(..), getEmptyBoard, setAt)
-import App.Data.Sudoku.Error (Error)
+import App.Data.Sudoku.Board (Board, Position, Size, getEmptyBoard, isComplete, setAt)
+import App.Data.Sudoku.Error (GameState(..))
 import App.Data.Sudoku.Field (valueToUserInput)
 import App.Logic.Error (calcErrors)
 import App.Wasm.Solver (solveSudoku, getHint)
 import App.Widget.Board as BoardWidget
+import App.Widget.Game (Action, MandatoryAction(..), Slots, _board, mkGameComponent)
 import Control.Monad.Maybe.Trans (runMaybeT)
 import Data.Maybe (Maybe(..))
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Effect.Class (class MonadEffect, liftEffect)
+import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Halogen as H
-import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
 import Partial.Unsafe (unsafePartial)
-import Type.Proxy (Proxy(..))
 
-type State = { board :: Board }
+type State' = 
+  { board       :: Board 
+  , selectedPos :: Maybe Position
+  , gameState   :: GameState
+  , freeze      :: Boolean
+  }
 
-data Action 
-  = HandleBoard BoardWidget.Output
-  | Solve 
-  | Hint
+type Input = Size
 
-type Slots = (board :: H.Slot BoardWidget.Query BoardWidget.Output Unit)
-_board = Proxy :: Proxy "board"
+data Query a = Restart a
 
+component :: forall m o. MonadAff m => H.Component Query Input o m
+component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
+  where 
+    init :: Input -> State'
+    init size = { board: getEmptyBoard size, selectedPos: Nothing, gameState: Incomplite [], freeze: false }
 
-component :: forall q m i o. MonadEffect m => MonadAff m => H.Component q i o m
-component =
-  H.mkComponent
-    { initialState: \_ -> { board: getEmptyBoard (Size 3) }
-    , render
-    , eval: H.mkEval H.defaultEval { handleAction = handleAction }
-    }
+    handleMandatory :: forall c. MandatoryAction Input -> H.HalogenM State' (Action Input c) Slots o m Unit
+    handleMandatory = case _ of 
+      BoardUpdated board -> do 
+        let errors = calcErrors board
+        case errors of 
+          [] | isComplete board -> H.modify_ $ \s -> s { gameState = Complite } 
+          _ -> H.modify_ $ \s -> s { gameState = Incomplite errors } 
+      Solve -> do
+        { board } <- H.modify $ \s -> s { freeze = true }
+        mSolution <- liftAff $ runMaybeT $ solveSudoku board
+        case mSolution of
+          Nothing -> liftEffect $ log "No solutions"
+          Just solution -> do 
+            H.modify_ $ \s -> s { board = solution, selectedPos = Nothing }
+            H.tell _board unit BoardWidget.ResetSelection
+            handleMandatory $ BoardUpdated board
+        H.modify_ $ \s -> s { freeze = false }
+      Hint -> do 
+        { board } <- H.modify $ \s -> s { freeze = true }
+        mHint <- liftAff $ runMaybeT $ getHint board 2
+        case mHint of
+          Nothing -> liftEffect $ log "No hint"
+          Just { position, digit, level } -> do
+            liftEffect $ log $ "Hint level " <> show level
+            newState <- H.modify $ \s -> s { board = unsafePartial $ setAt position (valueToUserInput digit) s.board }
+            handleMandatory $ BoardUpdated newState.board
+        H.modify_ $ \s -> s { freeze = false }
+      Refresh size ->
+        H.put $ init size
+      Final -> pure unit
 
-render :: forall m. State -> H.ComponentHTML Action Slots m
-render state =
-  HH.div_
-    [ HH.slot _board unit BoardWidget.component { board: state.board, errors, solved: false } HandleBoard
-    , HH.div_
-      [ HH.button 
-          [ HE.onClick \_ -> Solve ] 
-          [ HH.text "Solve this sudoku" ]
-      , HH.button 
-          [ HE.onClick \_ -> Hint ] 
-          [ HH.text "Get hint" ]
-      ]
-    ]
-  where
-    errors :: Array Error
-    errors = calcErrors state.board
-
-handleAction :: forall m o. MonadEffect m => MonadAff m => Action -> H.HalogenM State Action Slots o m Unit
-handleAction = case _ of
-  HandleBoard msg -> case msg of 
-    BoardWidget.ValueInserted pos val ->
-      H.modify_ (\s -> { board: unsafePartial $ setAt pos (valueToUserInput val) s.board })
-    _ -> pure unit
-  Solve -> do
-    state <- H.get
-    maybeSolution <- liftAff $ runMaybeT $ solveSudoku state.board
-    case maybeSolution of
-      Nothing -> liftEffect $ log "No solutions"
-      Just solution -> H.modify_ $ const { board: solution }
-  Hint -> do
-    state <- H.get
-    maybeHint <- liftAff $ runMaybeT $ getHint state.board 2
-    case maybeHint of
-      Nothing -> liftEffect $ log "No hint"
-      Just { position, digit, level } -> do
-        liftEffect $ log $ "Hint level " <> show level
-        H.modify_ (\s -> { board: unsafePartial $ setAt position (valueToUserInput digit) s.board })
+    handleQuery :: forall c a. Query a -> H.HalogenM State' (Action Input c) Slots o m (Maybe a)
+    handleQuery = case _ of 
+      Restart a -> do
+        { board } <- H.get
+        H.put $ init board.size
+        pure $ Just a

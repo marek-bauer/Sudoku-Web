@@ -1,7 +1,9 @@
 module App.Widget.Game
-  ( Action(..)
-  , MandatoryActions(..)
+  ( MandatoryAction(..)
+  , Action
   , State
+  , Slots
+  , _board
   , mkGameComponent
   )
   where
@@ -16,7 +18,7 @@ import App.Widget.Board as BoardWidget
 import App.Widget.Keyboard as KeyboardWidget
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.Tuple (Tuple(..), fst, snd)
-import Effect.Aff.Class (class MonadAff)
+import Effect.Class (class MonadEffect)
 import Effect.Class.Console (error)
 import Halogen (ClassName(..))
 import Halogen as H
@@ -36,10 +38,10 @@ type State r =
 data Action i c
   = HandleBoard BoardWidget.Output
   | HandleKeyboard KeyboardWidget.Output
-  | Mandatory (MandatoryActions i)
+  | Mandatory (MandatoryAction i)
   | Custom c
 
-data MandatoryActions i
+data MandatoryAction i
   = BoardUpdated Board
   | Solve 
   | Hint
@@ -55,18 +57,20 @@ _board = Proxy :: Proxy "board"
 _keyboard = Proxy :: Proxy "keyboard"
 
 
-mkGameComponent :: forall q m i o r c. MonadAff m 
+mkGameComponent :: forall q m i o r c. MonadEffect m 
   => (i -> State r)
-  -> (MandatoryActions i -> H.HalogenM (State r) (Action i c) Slots o m Unit)
+  -> (MandatoryAction i -> H.HalogenM (State r) (Action i c) Slots o m Unit)
   -> (c -> H.HalogenM (State r) (Action i c) Slots o m Unit)
+  -> (forall a. q a -> H.HalogenM (State r) (Action i c) Slots o m (Maybe a))
   -> H.Component q i o m
-mkGameComponent prepareInput handleMandatory handleCustom =
+mkGameComponent prepareInput handleMandatory handleCustom handleQuery =
   H.mkComponent
     { initialState: prepareInput
     , render
     , eval: H.mkEval H.defaultEval { handleAction = handleAction handleMandatory handleCustom
                                    , receive = Just <<< Mandatory <<< Refresh
                                    , finalize = Just $ Mandatory $ Final
+                                   , handleQuery = handleQuery 
                                    }
     }
 
@@ -103,8 +107,8 @@ render state =
       field <- runPartial (peekAt pos) state.board
       pure $ fieldToValue field
 
-handleAction :: forall c i r o m. MonadAff m 
-  => (MandatoryActions i -> H.HalogenM (State r) (Action i c) Slots o m Unit)
+handleAction :: forall c i r o m. MonadEffect m 
+  => (MandatoryAction i -> H.HalogenM (State r) (Action i c) Slots o m Unit)
   -> (c -> H.HalogenM (State r) (Action i c) Slots o m Unit) 
   -> Action i c
   -> H.HalogenM (State r) (Action i c) Slots o m Unit
