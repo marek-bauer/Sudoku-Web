@@ -60,7 +60,7 @@ getEmptyBoard :: Size -> Board
 getEmptyBoard size = 
   { size, sudoku: map (\_ -> map (const Empty) boardRange) boardRange}
   where
-    boardSize = toRowSize size * toRowSize size
+    boardSize = toRowSize size
     boardRange = range 0 (boardSize - 1)
 
 updateSudoku :: (Array (Array Field) -> Array (Array Field)) -> Board -> Board

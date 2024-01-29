@@ -78,7 +78,7 @@ render :: forall m i c r. State r -> H.ComponentHTML (Action i c) Slots m
 render state =
   HH.div [ HP.class_ $ ClassName "game" ]
     [ HH.slot _board unit BoardWidget.component { board: state.board, errors, solved } HandleBoard
-    , HH.div [ HP.class_ $ ClassName $ if isNothing state.selectedPos then "keyboard-hidden" else "keyboard-show" ]
+    , HH.div [ HP.class_ $ ClassName $ if isSelected then "keyboard-hidden" else "keyboard-show" ]
         [ HH.slot _keyboard unit KeyboardWidget.component { selected: selectedValue, size } HandleKeyboard ]
     , HH.div [ HP.class_ $ ClassName "help-btns" ]
       [ HH.button 
@@ -90,6 +90,9 @@ render state =
       ]
     ]
   where
+    isSelected :: Boolean
+    isSelected = isNothing state.selectedPos
+
     gameState :: Tuple (Array Error) Boolean
     gameState = case state.gameState of 
       Incomplite err -> Tuple err false
