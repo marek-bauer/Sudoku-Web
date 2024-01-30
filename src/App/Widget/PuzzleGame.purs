@@ -7,7 +7,7 @@ module App.Widget.PuzzleGame
 import Prelude
 
 import App.Data.Puzzle (Puzzle)
-import App.Data.Sudoku.Board (Board, Position, isComplete, setAt)
+import App.Data.Sudoku.Board (Board, Position, isComplete, setAt, freezeSudoku)
 import App.Data.Sudoku.Error (GameState(..))
 import App.Data.Sudoku.Field (Value(..), valueToUserInput)
 import App.Logic.Difference (emptyDifferances, filledDifferances)
@@ -57,7 +57,7 @@ component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pu
         let errors = calcErrors board
         case errors of 
           [] | isComplete board -> do 
-            H.modify_ $ \s -> s { gameState = Complite } 
+            H.modify_ $ \s -> s { gameState = Complite, board = freezeSudoku s.board } 
             H.raise Solved
           _ -> H.modify_ $ \s -> s { gameState = Incomplite errors } 
       Solve -> do

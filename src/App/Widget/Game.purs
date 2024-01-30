@@ -10,9 +10,9 @@ module App.Widget.Game
 
 import Prelude
 
-import App.Data.Sudoku.Board (Board, Position, Size, peekAt, setAt)
+import App.Data.Sudoku.Board (Board, Position, Size, peekAt, setAt, toRowSize)
 import App.Data.Sudoku.Error (Error, GameState(..))
-import App.Data.Sudoku.Field (Value(..), fieldToValue, valueToUserInput)
+import App.Data.Sudoku.Field (Value(..), fieldToValue, unValue, valueToUserInput)
 import App.Utils.Partial (runPartial)
 import App.Widget.Board as BoardWidget
 import App.Widget.Keyboard as KeyboardWidget
@@ -119,12 +119,13 @@ handleAction handleMandatory handleCustom = case _ of
   HandleBoard msg -> case msg of 
     BoardWidget.ValueInserted pos val -> do
       { board } <- H.get
-      let mNewBoard = runPartial (setAt pos $ valueToUserInput val) board
-      case mNewBoard of 
-        Just b -> do
-          H.modify_ $ \s -> s { board = b }
-          handleAction handleMandatory handleCustom $ Mandatory $ BoardUpdated b
-        Nothing -> error "Could not updated board"
+      when (unValue val <= toRowSize board.size) $ do
+        let mNewBoard = runPartial (setAt pos $ valueToUserInput val) board
+        case mNewBoard of 
+          Just b -> do
+            H.modify_ $ \s -> s { board = b }
+            handleAction handleMandatory handleCustom $ Mandatory $ BoardUpdated b
+          Nothing -> error "Could not updated board"
     BoardWidget.SelectionChanged pos -> 
       H.modify_ $ \s -> s { selectedPos = Just pos }
   HandleKeyboard (KeyboardWidget.Selected val) -> do

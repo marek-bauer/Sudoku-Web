@@ -3,6 +3,7 @@ module App.Data.Sudoku.Board
   ( Board
   , Position
   , Size(..)
+  , freezeSudoku
   , getBoxSize
   , getEmptyBoard
   , getSize
@@ -19,7 +20,7 @@ module App.Data.Sudoku.Board
 
 import Prelude
 
-import App.Data.Sudoku.Field (charToValue, valueToGiven, fieldToChar, Field(..))
+import App.Data.Sudoku.Field (charToValue, valueToGiven, fieldToChar, toGiven, Field(..))
 import App.Utils.Array (chunks, get)
 import Data.Array (all, concat, range)
 import Data.Array.Extra.Unsafe (unsafeModifyAt, unsafeUpdateAt)
@@ -88,3 +89,6 @@ loadBoard str = do
   sudoku_data <- traverse (map valueToGiven <<< charToValue)  $ toCharArray str
   let sudoku = chunks (size * size) sudoku_data
   pure $ { size: Size size, sudoku }
+
+freezeSudoku :: Board -> Board
+freezeSudoku b = b { sudoku = map (map toGiven) b.sudoku }

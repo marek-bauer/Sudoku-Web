@@ -1,6 +1,6 @@
 module App.Widget.FreeGame
   ( State'
-  , Query
+  , Query(..)
   , component
   )
   where
@@ -44,7 +44,8 @@ component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
       BoardUpdated board -> do 
         let errors = calcErrors board
         case errors of 
-          [] | isComplete board -> H.modify_ $ \s -> s { gameState = Complite } 
+          [] | isComplete board -> do 
+            H.modify_ $ \s -> s { gameState = Complite } 
           _ -> H.modify_ $ \s -> s { gameState = Incomplite errors } 
       Solve -> do
         { board } <- H.modify $ \s -> s { freeze = true }
@@ -76,3 +77,4 @@ component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
         { board } <- H.get
         H.put $ init board.size
         pure $ Just a
+        

@@ -6,6 +6,7 @@ module App.Data.Sudoku.Field
   , fieldToValue
   , isEditable
   , stringToValue
+  , toGiven
   , unValue
   , valueToChar
   , valueToGiven
@@ -57,6 +58,12 @@ valueToGiven :: Value -> Field
 valueToGiven = case _ of
   Value 0 -> Empty
   Value n -> Given (Value n)
+
+toGiven :: Field -> Field 
+toGiven = case _ of 
+  UserInput v -> Given v
+  Given v -> Given v
+  Empty -> Empty
 
 valueToUserInput :: Value -> Field
 valueToUserInput = case _ of

@@ -61,7 +61,7 @@ difficultySearch (Size size) = case _ of
 
 type Input =
   { localStorage :: Storage
-  , size :: Size
+  , size         :: Size
   }
 
 type State = 
