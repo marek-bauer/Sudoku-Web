@@ -68,12 +68,13 @@ component =
 data BorderType = NormalBorder | BoxBorder | NoBorder 
 
 render :: forall cs m. State -> H.ComponentHTML Action cs m
-render state =
-  HH.table
-    [HP.style "border-collapse: collapse;", HP.class_ (ClassName "sudoku")]
-    (displayBoard sudokuBoard)
+render state 
+  = HH.div [HP.classes $ map ClassName ["square"]]
+  [ HH.table
+      [HP.style "border-collapse: collapse;", HP.classes $ map ClassName ["content", "sudoku"]]
+      (displayBoard sudokuBoard)
+  ]
     where
-
       boxSize = Board.getBoxSize state.board
       boardSize = Board.getSize state.board
       sudokuBoard = Board.getSudokuByRows state.board
@@ -98,7 +99,7 @@ render state =
         <<< case _ of
         Empty -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), maxLength 0, HP.type_ InputText]
         UserInput i -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), HP.value <<< show $ i, maxLength 1, HP.type_ InputText]
-        Given i -> HH.text <<< show $ i
+        Given i -> HH.div [HP.class_ $ ClassName $ "given"] [HH.text $ show $ i]
         where
           style = getBorderStyle "bottom" (borderForIndex pos.y) 
             <> getBorderStyle "right" (borderForIndex pos.x)

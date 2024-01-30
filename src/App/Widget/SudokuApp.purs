@@ -61,12 +61,15 @@ component =
     }
 
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action Slots m
-render state = HH.div [HP.class_ $ ClassName "main-frame"] $
-  [ case state.mode of 
-      Menu -> HH.div [HP.class_ $ ClassName "menu"] $ 
-        (map mkStartPuzzleBtn allDiffuculties) <> [mkStartFreeGameBtn]
-      FreeGame -> HH.slot_ _freeGame unit FreeGame.component state.size
-      PuzzleGame puzzle -> HH.slot _puzzleGame unit PuzzleGame.component puzzle HandlePuzzleGame
+render state = HH.div [HP.classes $ map ClassName ["main-frame"]] $
+  [ HH.text ""
+  , HH.div [HP.classes $ map ClassName ["row", "justify-content-center"]] [
+      case state.mode of 
+        Menu -> HH.div [HP.class_ $ ClassName "menu"] $ 
+          (map mkStartPuzzleBtn allDiffuculties) <> [mkStartFreeGameBtn]
+        FreeGame -> HH.slot_ _freeGame unit FreeGame.component state.size
+        PuzzleGame puzzle -> HH.slot _puzzleGame unit PuzzleGame.component puzzle HandlePuzzleGame
+    ]
   , HH.slot_ _puzzleController unit PuzzleController.controller { localStorage: state.localStorage, size: state.size }
   ]
   where
