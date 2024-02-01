@@ -1,0 +1,46 @@
+@include media-breakpoint-down(md) { 
+  .sudoku-keyboard div {
+    font-size: 4vmin;
+    width: 6.5vmin;
+  }
+}
+
+@include media-breakpoint-between(md, xl) { 
+  .sudoku-keyboard div {
+    font-size: 3.5vmin;
+    width: 5.5vmin;
+  }
+}
+
+@include media-breakpoint-up(xl) { 
+  .sudoku-keyboard div {
+    font-size: 3vmin;
+    width: 4.5vmin;
+  }
+}
+
+.sudoku-keyboard {
+  margin: 6px 0;
+}
+
+.keyboard-hidden {
+  display: hidden;
+}
+
+.sudoku-keyboard {
+  display: flex;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+}
+
+.keyboard-btn {
+  padding: 5px;
+  font: 15pt black;
+  background: rgb(197, 197, 197);
+  transition: 0.6s;
+  flex-grow: 2;
+  margin: 3px;
+  text-align: center;
+  min-width: 26px;
+  border-radius: 30px;
+}

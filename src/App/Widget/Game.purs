@@ -80,16 +80,23 @@ render state =
     [ HH.slot _board unit BoardWidget.component { board: state.board, errors, solved } HandleBoard
     , HH.div [ HP.class_ $ ClassName $ if isSelected then "keyboard-hidden" else "keyboard-show" ]
         [ HH.slot _keyboard unit KeyboardWidget.component { selected: selectedValue, size } HandleKeyboard ]
-    , HH.div [ HP.class_ $ ClassName "help-btns" ]
+    , HH.div [ HP.classes $ map ClassName ["help-btns", "d-flex", "justify-content-around"] ]
       [ HH.button 
-          [ HE.onClick \_ -> Mandatory $ Solve, HP.class_ $ ClassName "solve-btn", HP.disabled solved ] 
+          [ HE.onClick \_ -> Mandatory $ Solve
+          , HP.classes $ map ClassName ["solve-btn", "btn-outline-danger", "btn"]
+          , HP.disabled solved 
+          ] 
           [ HH.text "Solve this sudoku" ]
       , HH.button 
-          [ HE.onClick \_ -> Mandatory $ Hint, HP.class_ $ ClassName "solve-btn", HP.disabled solved ] 
+          [ HE.onClick \_ -> Mandatory $ Hint
+          , HP.classes $ map ClassName ["hint-btn", "btn-outline-warning", "btn"]
+          , HP.disabled solved 
+          ] 
           [ HH.text "Get hint" ]
       ]
     ]
   where
+
     isSelected :: Boolean
     isSelected = isNothing state.selectedPos
 

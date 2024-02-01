@@ -7,11 +7,12 @@ module App.Widget.SudokuApp
 import Prelude
 
 import App.Controller.PuzzleController as PuzzleController
-import App.Data.Difficulty (Difficulty, allDiffuculties)
+import App.Data.Difficulty (Difficulty(..), allDiffuculties, prettyDifficulty)
 import App.Data.Puzzle (Puzzle)
 import App.Data.Sudoku.Board (Size)
 import App.Widget.FreeGame as FreeGame
 import App.Widget.PuzzleGame as PuzzleGame
+import Data.Array (singleton)
 import Data.Maybe (Maybe(..))
 import Effect.Aff.Class (class MonadAff)
 import Effect.Class.Console (error)
@@ -62,25 +63,53 @@ component =
 
 render :: forall m. MonadAff m => State -> H.ComponentHTML Action Slots m
 render state = HH.div [HP.classes $ map ClassName ["main-frame"]] $
-  [ HH.text ""
+  [ navBar
   , HH.div [HP.classes $ map ClassName ["row", "justify-content-center"]] [
       case state.mode of 
-        Menu -> HH.div [HP.class_ $ ClassName "menu"] $ 
-          (map mkStartPuzzleBtn allDiffuculties) <> [mkStartFreeGameBtn]
+        Menu -> HH.div [HP.classes $ map ClassName ["menu", "col-10", "col-md-8", "col-xl-6", "justify-content-center"] ] 
+          [ HH.div [HP.classes $ map ClassName [ "justify-content-center", "menu-text" ]] 
+            [HH.text "Select game difficulty"]
+          , HH.div [HP.classes $ map ClassName ["d-grid",  "gap-2", "align-middle"] ] $ 
+            (map mkStartPuzzleBtn allDiffuculties) <> [mkStartFreeGameBtn]
+          ]
         FreeGame -> HH.slot_ _freeGame unit FreeGame.component state.size
         PuzzleGame puzzle -> HH.slot _puzzleGame unit PuzzleGame.component puzzle HandlePuzzleGame
     ]
   , HH.slot_ _puzzleController unit PuzzleController.controller { localStorage: state.localStorage, size: state.size }
   ]
   where
+    navBar :: forall w. HH.HTML w Action
+    navBar = HH.nav [HP.classes $ map ClassName ["navbar", "bg-dark", "border-bottom"]] $ singleton $
+      HH.div [HP.classes $ map ClassName ["container-fluid"]] 
+      [ HH.span [HP.classes $ map ClassName ["navbar-brand",  "mb-0 h1", "justify-content-center"]]
+        [ HH.text "Sudoku-Web"
+        ]
+      , HH.ul [HP.classes $ map ClassName ["nav-bar-btns", "nav", "justify-content-start"]] 
+        $ case state.mode of 
+          Menu -> []
+          _ -> [ HH.li [HP.classes $ map ClassName ["nav-item"], onClick $ \_ -> Back] 
+                  [ HH.i [HP.classes $ map ClassName ["bi", "bi-box-arrow-left"]] []
+                  , HH.text "Back"]
+               ]
+      ]
+
     mkStartPuzzleBtn :: forall w. Difficulty -> HH.HTML w Action
     mkStartPuzzleBtn diff = HH.div 
-      [HP.class_ $ ClassName "menu-btn", onClick $ \_ -> NewPuzzleGame diff] 
-      [HH.text $ show diff]
+      [ HP.classes $ map ClassName $ [ "btn", "menu-btn", diffClass ]
+      , onClick $ \_ -> NewPuzzleGame diff
+      ] 
+      [HH.text $ prettyDifficulty diff]
+      where 
+        diffClass :: String 
+        diffClass = case diff of 
+          Nightmare -> "btn-danger"
+          _ -> "btn-primary"
 
     mkStartFreeGameBtn :: forall w. HH.HTML w Action
     mkStartFreeGameBtn = HH.div 
-      [HP.class_ $ ClassName "menu-btn", onClick $ \_ -> NewFreeGame] 
+      [ HP.classes $ map ClassName $ [ "btn", "menu-btn", "btn-success" ]
+      , onClick $ \_ -> NewFreeGame
+      ] 
       [HH.text $ "Solver"]
 
 handleAction :: forall o m. MonadAff m => Action -> H.HalogenM State Action Slots o m Unit

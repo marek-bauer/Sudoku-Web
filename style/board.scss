@@ -1,0 +1,97 @@
+
+@include media-breakpoint-down(md) { 
+  $board-size: calc(min(80vw, 100vh - 200px));
+  .board {
+    font-size: 5vmin;
+    width: $board-size;
+    height: $board-size;
+  }
+}
+
+@include media-breakpoint-between(md, xl) { 
+  $board-size: calc(min(65vw, 100vh - 200px));
+  .board {
+    font-size: 4vmin;
+    width: $board-size;
+    height: $board-size;
+  }
+}
+
+@include media-breakpoint-up(xl) { 
+  $board-size: calc(min(50vw, 100vh - 200px));
+  .board {
+    font-size: 3.5vmin;
+    width: $board-size;
+    height: $board-size;
+  }
+}
+
+$box-border: 3px solid black;
+$normal-border: 1px solid black;
+
+.border-bottom-box {
+  border-bottom: $box-border;
+}
+
+.border-bottom-normal {
+  border-bottom: 1px solid black;
+}
+
+.border-bottom-no {
+  border-bottom: 0px;
+}
+
+.border-right-box {
+  border-right: $box-border;
+}
+
+.border-right-normal {
+  border-right: $normal-border;
+}
+
+.border-right-no {
+  border-right: 0px;
+}
+
+.board {
+  border: $box-border;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.board input {
+  width: 100%;
+  height: 100%;
+  font-weight: bolder;
+  font-family: "Caveat", cursive;
+  text-align: center;
+  border: 0px;
+  background-color: transparent;
+  color: black;
+  outline: none;
+}
+
+.board input[disabled] {
+  font-family: "Caveat", cursive;
+  font-family: "Montserrat", sans-serif;
+}
+
+.field {
+  background-color: rgb(224, 224, 224);
+  transition: cubic-bezier(0.175, 0.885, 0.32, 1.275) 1s;
+  outline: 0px;
+  width: calc(100%/9);
+  height: calc(100%/9);
+}
+
+.field-focused {
+  background-color: yellow;
+}
+
+.field-error {
+  background-color: red;
+}
+
+.field-success { 
+  background-color: limegreen;
+}

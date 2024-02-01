@@ -45,11 +45,17 @@ render :: forall cs m. State -> H.ComponentHTML Action cs m
 render state = HH.div [HP.class_ $ ClassName "sudoku-keyboard"] $
   flip map (range 1 finalElement) \elem -> 
     HH.div 
-      [ HP.classes $ map ClassName $ ["keyboard-btn"] <> if isSelected elem then ["keyboard-selected"] else [] 
+      [ HP.classes $ classes elem
       , HE.onClick $ \_ -> Pressed elem
       ] 
       [HH.text $ show (Value elem)]
   where
+    classes :: Int -> Array ClassName 
+    classes elem = map ClassName 
+      [ "btn"
+      , if isSelected elem then "btn-info" else "btn-outline-info"
+      ]
+
     finalElement = toRowSize state.size
 
     isSelected :: Int -> Boolean

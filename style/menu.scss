@@ -1,0 +1,17 @@
+.navbar-brand, .container-fluid {
+  color: white;
+}
+
+.menu {
+  position: absolute;
+  top: 50%;
+  -ms-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
+.menu-text {
+  margin-bottom: 20px;
+  font-weight: bold;
+  font-size: 30pt;
+  text-align: center;
+}

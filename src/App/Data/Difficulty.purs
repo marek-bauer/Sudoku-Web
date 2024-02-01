@@ -1,6 +1,7 @@
 module App.Data.Difficulty
   ( Difficulty(..)
   , allDiffuculties
+  , prettyDifficulty
   )
   where
 
@@ -20,6 +21,13 @@ instance difficultyShow :: Show Difficulty where
   show Medium = "medium"
   show Hard = "hard"
   show Nightmare = "nightmare"
+
+prettyDifficulty :: Difficulty -> String
+prettyDifficulty = case _ of 
+  Easy -> "Easy"
+  Medium -> "Medium"
+  Hard -> "Hard"
+  Nightmare -> "Nightmare"
 
 allDiffuculties :: Array Difficulty
 allDiffuculties= [Easy, Medium, Hard, Nightmare]

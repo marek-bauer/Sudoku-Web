@@ -69,11 +69,9 @@ data BorderType = NormalBorder | BoxBorder | NoBorder
 
 render :: forall cs m. State -> H.ComponentHTML Action cs m
 render state 
-  = HH.div [HP.classes $ map ClassName ["square"]]
-  [ HH.table
-      [HP.style "border-collapse: collapse;", HP.classes $ map ClassName ["content", "sudoku"]]
+  = HH.table
+      [HP.style "border-collapse: collapse;", HP.classes $ map ClassName ["board"]]
       (displayBoard sudokuBoard)
-  ]
     where
       boxSize = Board.getBoxSize state.board
       boardSize = Board.getSize state.board
@@ -95,22 +93,28 @@ render state
       displayRow y = HH.tr_ <<< map (\(Tuple x f) -> displayField { x, y } f) <<< withIndex
 
       displayField :: forall w. Position -> Field -> HH.HTML w Action
-      displayField pos = HH.td [HP.style style, HE.onClick $ \_ -> SelectionChange pos] <<< singleton 
+      displayField pos = HH.td [HP.classes classes, HE.onClick $ \_ -> SelectionChange pos] <<< singleton 
         <<< case _ of
         Empty -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), maxLength 0, HP.type_ InputText]
         UserInput i -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), HP.value <<< show $ i, maxLength 1, HP.type_ InputText]
-        Given i -> HH.div [HP.class_ $ ClassName $ "given"] [HH.text $ show $ i]
+        Given i ->  HH.input [HP.disabled true,  HP.value <<< show $ i, HP.type_ InputText]
         where
-          style = getBorderStyle "bottom" (borderForIndex pos.y) 
-            <> getBorderStyle "right" (borderForIndex pos.x)
-            <> if Set.member pos redFields then "background-color: red;" else ""
-            <> if Just pos == state.focused then "background-color: yelow;" else ""
+          classes :: Array ClassName
+          classes = map ClassName
+            [ getBorderStyle "bottom" (borderForIndex pos.y) 
+            , getBorderStyle "right" (borderForIndex pos.x)
+            , if Just pos == state.focused then "field-focused"
+              else if Set.member pos redFields then "field-error"
+              else if state.solved then "field-success"
+              else "field-normal"
+            , "field"
+            ]
       
       getBorderStyle :: String -> BorderType -> String
       getBorderStyle side borderType = "border-" <> side <> case borderType of
-        NormalBorder -> ": solid 1px black;"
-        BoxBorder -> ": solid 3px blue;"
-        NoBorder -> ": 0px;"
+        NormalBorder -> "-normal"
+        BoxBorder -> "-box"
+        NoBorder -> "-no"
 
       maxLength :: forall r i. Int -> IProp (maxLength :: Int | r) i
       maxLength = prop (H.PropName "maxLength")

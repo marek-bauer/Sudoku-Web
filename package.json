@@ -2,6 +2,7 @@
   "private": true,
   "dependencies": {
     "bootstrap": "^5.3.2",
+    "bootstrap-icons": "^1.11.3",
     "wasm_sudoku_solver": "file:./wasm/pkg"
   },
   "devDependencies": {
