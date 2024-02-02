@@ -44,7 +44,7 @@ type InputRows =
 type Input = Record InputRows
 
 data Output 
-  = SelectionChanged Board.Position
+  = SelectionChanged (Maybe Board.Position)
   | ValueInserted Board.Position Value
 
 data Query a = ResetSelection a
@@ -95,9 +95,24 @@ render state
       displayField :: forall w. Position -> Field -> HH.HTML w Action
       displayField pos = HH.td [HP.classes classes, HE.onClick $ \_ -> SelectionChange pos] <<< singleton 
         <<< case _ of
-        Empty -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), maxLength 0, HP.type_ InputText]
-        UserInput i -> HH.input [HE.onKeyDown \ev -> ValueInsert pos (eventKey ev), HP.value <<< show $ i, maxLength 1, HP.type_ InputText]
-        Given i ->  HH.input [HP.disabled true,  HP.value <<< show $ i, HP.type_ InputText]
+        Empty -> HH.input 
+          [ HE.onKeyDown \ev -> ValueInsert pos (eventKey ev)
+          , maxLength 0
+          , HP.type_ InputText
+          ]
+        UserInput i -> HH.input 
+          [ HE.onKeyDown \ev -> ValueInsert pos (eventKey ev)
+          , HP.value <<< show $ i
+          , maxLength 1
+          , HP.type_ InputText
+          ]
+        Given i -> HH.input 
+          [ HP.class_ $ ClassName "given"
+          , HP.readOnly true
+          , maxLength 1
+          , HP.value <<< show $ i
+          , HP.type_ InputText
+          ]
         where
           classes :: Array ClassName
           classes = map ClassName
@@ -123,15 +138,20 @@ handleQuery :: forall cs m a. Query a -> H.HalogenM State Action cs Output m (Ma
 handleQuery = case _ of 
   ResetSelection a -> do
     H.modify_ $ \s -> s { focused = Nothing }
+    H.raise $ SelectionChanged $ Nothing
     pure $ Just a 
 
 handleAction :: forall cs m. Action -> H.HalogenM State Action cs Output m Unit
 handleAction = case _ of
   SelectionChange pos -> do 
     { focused, board } <- H.get
-    when (focused /= Just pos && (unsafePartial $ isEditable $ peekAt pos board)) $ do 
+    if (focused /= Just pos && (unsafePartial $ isEditable $ peekAt pos board)) then do 
       H.modify_ $ \s -> s { focused = Just pos }
-      H.raise $ SelectionChanged pos
+      H.raise $ SelectionChanged $ Just pos
+      
+    else do
+      H.modify_ $ \s -> s { focused = Nothing }
+      H.raise $ SelectionChanged $ Nothing
   ValueInsert pos val -> H.raise $ ValueInserted pos $ fromMaybe (Value 0) $ stringToValue val
   Refresh input -> do
-    H.modify_ $ \s -> s { board = input.board, errors = input.errors }
+    H.modify_ $ \s -> s { board = input.board, errors = input.errors, solved = input.solved }

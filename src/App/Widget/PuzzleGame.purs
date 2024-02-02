@@ -57,7 +57,8 @@ component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pu
         let errors = calcErrors board
         case errors of 
           [] | isComplete board -> do 
-            H.modify_ $ \s -> s { gameState = Complite, board = freezeSudoku s.board } 
+            H.modify_ $ \s -> s { gameState = Complite, board = freezeSudoku s.board }
+            H.tell _board unit BoardWidget.ResetSelection 
             H.raise Solved
           _ -> H.modify_ $ \s -> s { gameState = Incomplite errors } 
       Solve -> do
@@ -66,6 +67,7 @@ component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pu
         handleMandatory $ BoardUpdated $ board
       Hint -> do
         { board, puzzle } <- H.modify $ \s -> s { freeze = true }
+        H.tell _board unit BoardWidget.ResetSelection
         let solution = puzzle.solution
         eHint <- runExceptT $ do 
           foundErrors <- except 

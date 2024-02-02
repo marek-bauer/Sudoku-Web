@@ -45,20 +45,22 @@ component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
         let errors = calcErrors board
         case errors of 
           [] | isComplete board -> do 
+            H.tell _board unit BoardWidget.ResetSelection
             H.modify_ $ \s -> s { gameState = Complite } 
           _ -> H.modify_ $ \s -> s { gameState = Incomplite errors } 
       Solve -> do
         { board } <- H.modify $ \s -> s { freeze = true }
+        H.tell _board unit BoardWidget.ResetSelection
         mSolution <- liftAff $ runMaybeT $ solveSudoku board
         case mSolution of
           Nothing -> liftEffect $ log "No solutions"
           Just solution -> do 
             H.modify_ $ \s -> s { board = solution, selectedPos = Nothing }
-            H.tell _board unit BoardWidget.ResetSelection
             handleMandatory $ BoardUpdated board
         H.modify_ $ \s -> s { freeze = false }
       Hint -> do 
         { board } <- H.modify $ \s -> s { freeze = true }
+        H.tell _board unit BoardWidget.ResetSelection
         mHint <- liftAff $ runMaybeT $ getHint board 2
         case mHint of
           Nothing -> liftEffect $ log "No hint"

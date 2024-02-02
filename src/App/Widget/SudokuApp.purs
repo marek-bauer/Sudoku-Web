@@ -81,15 +81,16 @@ render state = HH.div [HP.classes $ map ClassName ["main-frame"]] $
     navBar :: forall w. HH.HTML w Action
     navBar = HH.nav [HP.classes $ map ClassName ["navbar", "bg-dark", "border-bottom"]] $ singleton $
       HH.div [HP.classes $ map ClassName ["container-fluid"]] 
-      [ HH.span [HP.classes $ map ClassName ["navbar-brand",  "mb-0 h1", "justify-content-center"]]
+      [ HH.span [HP.classes $ map ClassName ["navbar-brand"]]
         [ HH.text "Sudoku-Web"
         ]
-      , HH.ul [HP.classes $ map ClassName ["nav-bar-btns", "nav", "justify-content-start"]] 
+      , HH.ul [HP.classes $ map ClassName ["nav-bar-btns", "nav"]] 
         $ case state.mode of 
           Menu -> []
           _ -> [ HH.li [HP.classes $ map ClassName ["nav-item"], onClick $ \_ -> Back] 
-                  [ HH.i [HP.classes $ map ClassName ["bi", "bi-box-arrow-left"]] []
-                  , HH.text "Back"]
+                  [ HH.span_ [HH.text "Back "]
+                  , HH.i [HP.classes $ map ClassName ["bi", "bi-x"]] []
+                  ]
                ]
       ]
 

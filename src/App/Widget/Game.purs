@@ -96,7 +96,6 @@ render state =
       ]
     ]
   where
-
     isSelected :: Boolean
     isSelected = isNothing state.selectedPos
 
@@ -134,7 +133,7 @@ handleAction handleMandatory handleCustom = case _ of
             handleAction handleMandatory handleCustom $ Mandatory $ BoardUpdated b
           Nothing -> error "Could not updated board"
     BoardWidget.SelectionChanged pos -> 
-      H.modify_ $ \s -> s { selectedPos = Just pos }
+      H.modify_ $ \s -> s { selectedPos = pos }
   HandleKeyboard (KeyboardWidget.Selected val) -> do
     { board, selectedPos } <- H.get
     let 
