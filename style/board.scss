@@ -97,3 +97,28 @@ $normal-border: 1px solid black;
 .field-success { 
   background-color: #649d18;
 }
+
+.no-freeze {
+  display: none;
+}
+
+.freeze-div {
+  position: fixed;
+  top: 58px;
+  left: 0;
+  width: 100vw;
+  height: calc(100vh - 58px);
+  background-color: #000000ab;
+  z-index: 1;
+
+  .spinner-border {
+    $size: 120px;
+    position: absolute;
+    top: calc(50% - $size / 2);
+    left: calc(50% - $size / 2);
+    width: $size;
+    height: $size;
+    font-size: 20px;
+    color: white
+  }
+}

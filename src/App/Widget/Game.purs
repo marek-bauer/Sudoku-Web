@@ -95,6 +95,9 @@ render state =
           ] 
           [ HH.text "Get hint" ]
       ]
+    , HH.div 
+        [ HP.classes $ map ClassName [if state.freeze then "freeze-div" else "no-freeze"] ]
+        [ HH.div [HP.class_ $ ClassName "spinner-border"] []]
     ]
   where
     isSelected :: Boolean
