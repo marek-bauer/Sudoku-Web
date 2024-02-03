@@ -1,7 +1,7 @@
 @include media-breakpoint-between(xs, sm) { 
   .sudoku-keyboard div {
-    font-size: 12pt;
-    width: calc(100% / 5 - 10px);
+    font-size: 14pt;
+    width: calc(100% / 3 - 10px);
     margin: 2px;
   }
 }

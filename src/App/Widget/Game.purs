@@ -32,6 +32,7 @@ type State r =
   , selectedPos :: Maybe Position
   , gameState   :: GameState
   , freeze      :: Boolean
+  , isMobile    :: Boolean
   | r
   }
 
@@ -77,7 +78,7 @@ mkGameComponent prepareInput handleMandatory handleCustom handleQuery =
 render :: forall m i c r. State r -> H.ComponentHTML (Action i c) Slots m
 render state =
   HH.div [ HP.classes $ map ClassName ["game", "col-10", "col-md-8", "col-xl-6", "row", "justify-content-center"] ]
-    [ HH.slot _board unit BoardWidget.component { board: state.board, errors, solved } HandleBoard
+    [ HH.slot _board unit BoardWidget.component { board: state.board, errors, solved, isMobile } HandleBoard
     , HH.div [ HP.class_ $ ClassName $ if isSelected then "keyboard-hidden" else "keyboard-show" ]
         [ HH.slot _keyboard unit KeyboardWidget.component { selected: selectedValue, size } HandleKeyboard ]
     , HH.div [ HP.classes $ map ClassName ["help-btns", "d-flex", "justify-content-around"] ]
@@ -106,6 +107,7 @@ render state =
 
     errors = fst gameState
     solved = snd gameState
+    isMobile = state.isMobile
 
     size :: Size
     size = state.board.size

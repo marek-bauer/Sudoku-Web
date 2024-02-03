@@ -27,9 +27,10 @@ type State' =
   , selectedPos :: Maybe Position
   , gameState   :: GameState
   , freeze      :: Boolean
+  , isMobile    :: Boolean
   }
 
-type Input = Size
+type Input = { size :: Size, isMobile :: Boolean }
 
 data Query a = Restart a
 
@@ -37,7 +38,12 @@ component :: forall m o. MonadAff m => H.Component Query Input o m
 component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
   where 
     init :: Input -> State'
-    init size = { board: getEmptyBoard size, selectedPos: Nothing, gameState: Incomplite [], freeze: false }
+    init input = { board: getEmptyBoard input.size
+                 , selectedPos: Nothing
+                 , gameState: Incomplite []
+                 , freeze: false 
+                 , isMobile: input.isMobile
+                 }
 
     handleMandatory :: forall c. MandatoryAction Input -> H.HalogenM State' (Action Input c) Slots o m Unit
     handleMandatory = case _ of 
@@ -69,14 +75,14 @@ component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
             newState <- H.modify $ \s -> s { board = unsafePartial $ setAt position (valueToUserInput digit) s.board }
             handleMandatory $ BoardUpdated newState.board
         H.modify_ $ \s -> s { freeze = false }
-      Refresh size ->
-        H.put $ init size
+      Refresh input ->
+        H.put $ init input
       Final -> pure unit
 
     handleQuery :: forall c a. Query a -> H.HalogenM State' (Action Input c) Slots o m (Maybe a)
     handleQuery = case _ of 
       Restart a -> do
-        { board } <- H.get
-        H.put $ init board.size
+        { board, isMobile } <- H.get
+        H.put $ init { size: board.size, isMobile }
         pure $ Just a
         

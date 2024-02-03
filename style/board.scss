@@ -8,7 +8,7 @@ $normal-border: 1px solid black;
   transition: none;
 
   @include media-breakpoint-between(xs, sm) { 
-    $board-size: calc(min(90vw, 100vh - 260px));
+    $board-size: calc(min(90vw, 100vh - 20px));
     font-size: calc($board-size / 16);
     width: calc($board-size);
     height: calc($board-size);

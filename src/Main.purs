@@ -3,6 +3,7 @@ module Main where
 import Prelude
 
 import App.Data.Sudoku.Board (Size(..))
+import App.Utils.Device (isMobile)
 import App.Widget.SudokuApp as App
 import Effect (Effect)
 import Effect.Class (liftEffect)
@@ -17,4 +18,5 @@ main = do
     body <- HA.awaitBody
     w <- liftEffect $ window
     storage <- liftEffect $ localStorage w
-    runUI App.component { size: Size 3, localStorage: storage } body
+    mobile <- liftEffect $ isMobile
+    runUI App.component { size: Size 3, localStorage: storage, isMobile: mobile } body

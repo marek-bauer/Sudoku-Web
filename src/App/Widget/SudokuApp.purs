@@ -27,14 +27,16 @@ import Web.Storage.Storage (Storage)
 data Mode = Menu | FreeGame | PuzzleGame Puzzle
 
 type State = 
-  { mode :: Mode
+  { mode         :: Mode
   , localStorage :: Storage
+  , isMobile     :: Boolean
   , size         :: Size
   }
 
 type Input =
   { localStorage :: Storage
   , size         :: Size
+  , isMobile     :: Boolean
   }
 
 data Action 
@@ -56,7 +58,7 @@ _puzzleController = Proxy :: Proxy "puzzleController"
 component :: forall q o m. MonadAff m => H.Component q Input o m
 component =
   H.mkComponent
-    { initialState: \i -> { mode: Menu, localStorage: i.localStorage, size: i.size }
+    { initialState: \i -> { mode: Menu, localStorage: i.localStorage, size: i.size, isMobile: i.isMobile }
     , render
     , eval: H.mkEval H.defaultEval { handleAction = handleAction }
     }
@@ -72,12 +74,15 @@ render state = HH.div [HP.classes $ map ClassName ["main-frame"]] $
           , HH.div [HP.classes $ map ClassName ["d-grid",  "gap-2", "align-middle"] ] $ 
             (map mkStartPuzzleBtn allDiffuculties) <> [mkStartFreeGameBtn]
           ]
-        FreeGame -> HH.slot_ _freeGame unit FreeGame.component state.size
-        PuzzleGame puzzle -> HH.slot _puzzleGame unit PuzzleGame.component puzzle HandlePuzzleGame
+        FreeGame -> HH.slot_ _freeGame unit FreeGame.component { size: state.size, isMobile }
+        PuzzleGame puzzle -> 
+          HH.slot _puzzleGame unit PuzzleGame.component { puzzle, isMobile } HandlePuzzleGame
     ]
   , HH.slot_ _puzzleController unit PuzzleController.controller { localStorage: state.localStorage, size: state.size }
   ]
   where
+    isMobile = state.isMobile
+
     navBar :: forall w. HH.HTML w Action
     navBar = HH.nav [HP.classes $ map ClassName ["navbar", "bg-dark", "border-bottom"]] $ singleton $
       HH.div [HP.classes $ map ClassName ["container-fluid"]] 

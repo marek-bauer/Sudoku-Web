@@ -36,9 +36,10 @@ type State =
   }
 
 type InputRows = 
-  ( board   :: Board.Board
-  , errors  :: Array Error
-  , solved  :: Boolean
+  ( board    :: Board.Board
+  , errors   :: Array Error
+  , solved   :: Boolean
+  , isMobile :: Boolean
   )
 
 type Input = Record InputRows
@@ -57,7 +58,12 @@ data Action
 component :: forall m. H.Component Query Input Output m
 component =
   H.mkComponent
-    { initialState: \i -> { focused: Nothing, board: i.board, errors: i.errors, solved: i.solved }
+    { initialState: \i -> { focused: Nothing
+                          , board: i.board
+                          , errors: i.errors
+                          , solved: i.solved
+                          , isMobile: i.isMobile  
+                          }
     , render
     , eval: H.mkEval H.defaultEval { handleAction = handleAction 
                                    , receive = \i -> Just $ Refresh i
@@ -97,12 +103,14 @@ render state
         <<< case _ of
         Empty -> HH.input 
           [ HE.onKeyDown \ev -> ValueInsert pos (eventKey ev)
+          , HP.readOnly state.isMobile
           , maxLength 0
           , HP.type_ InputText
           ]
         UserInput i -> HH.input 
           [ HE.onKeyDown \ev -> ValueInsert pos (eventKey ev)
           , HP.value <<< show $ i
+          , HP.readOnly state.isMobile
           , maxLength 1
           , HP.type_ InputText
           ]

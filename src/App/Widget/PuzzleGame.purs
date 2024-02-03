@@ -38,9 +38,10 @@ type State' =
   , selectedPos :: Maybe Position
   , gameState   :: GameState
   , freeze      :: Boolean
+  , isMobile    :: Boolean
   }
 
-type Input = Puzzle
+type Input = { puzzle :: Puzzle, isMobile :: Boolean }
 
 data Output = Solved 
 
@@ -49,7 +50,13 @@ component :: forall q m. MonadAff m => H.Component q Input Output m
 component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pure $ Nothing)
   where
     init :: Input -> State'
-    init puzzle = { board: puzzle.puzzle, puzzle, selectedPos: Nothing, gameState: Incomplite [], freeze: false }
+    init i = { board: i.puzzle.puzzle
+             , puzzle: i.puzzle
+             , selectedPos: Nothing
+             , gameState: Incomplite []
+             , freeze: false
+             , isMobile: i.isMobile 
+             }
     
     handleMandatory :: forall c. MandatoryAction Input -> H.HalogenM State' (Action Input c) Slots Output m Unit
     handleMandatory = case _ of 
@@ -95,8 +102,8 @@ component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pu
             newState <- H.modify $ \s -> s { board = unsafePartial $ setAt position (valueToUserInput digit) s.board }
             handleMandatory $ BoardUpdated $ newState.board
         H.modify_ $ \s -> s { freeze = false }
-      Refresh puzzle -> do 
-        H.modify_ $ const $ init puzzle
+      Refresh input -> do 
+        H.modify_ $ const $ init input
         H.tell _board unit BoardWidget.ResetSelection
       Final -> pure unit
 
