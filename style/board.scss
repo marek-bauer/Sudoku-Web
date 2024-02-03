@@ -1,42 +1,42 @@
-@include media-breakpoint-between(xs, sm) { 
-  $board-size: calc(min(90vw, 100vh - 300px));
-  .board {
-    font-size: calc(min(90vw, 100vh - 300px) / 16);;
-    width: $board-size;
-    height: $board-size;
-  }
-}
-
-
-@include media-breakpoint-between(sm, md) { 
-  $board-size: calc(min(80vw, 100vh - 240px));
-  .board {
-    font-size: 4.5vmin;
-    width: $board-size;
-    height: $board-size;
-  }
-}
-
-@include media-breakpoint-between(md, xl) { 
-  $board-size: calc(min(65vw, 100vh - 280px));
-  .board {
-    font-size: 4vmin;
-    width: $board-size;
-    height: $board-size;
-  }
-}
-
-@include media-breakpoint-up(xl) { 
-  $board-size: calc(min(50vw, 100vh - 300px));
-  .board {
-    font-size: 3.5vmin;
-    width: $board-size;
-    height: $board-size;
-  }
-}
-
 $box-border: 3px solid black;
 $normal-border: 1px solid black;
+
+.board {
+  border: $box-border;
+  text-align: center;
+  margin-top: 8px;
+  transition: none;
+
+  @include media-breakpoint-between(xs, sm) { 
+    $board-size: calc(min(90vw, 100vh - 260px));
+    font-size: calc($board-size / 16);
+    width: calc($board-size);
+    height: calc($board-size);
+  }
+  
+  @include media-breakpoint-between(sm, md) { 
+    $board-size: calc(min(80vw, 100vh - 220px));
+    font-size: calc($board-size / 16);
+    width: calc($board-size);
+    height: calc($board-size);
+  }
+  
+  @include media-breakpoint-between(md, xl) { 
+    $board-size: calc(min(65vw, 100vh - 240px));
+    font-size: calc($board-size / 16);
+    width: calc($board-size);
+    height: calc($board-size);
+  }
+  
+  @include media-breakpoint-up(xl) { 
+    $board-size: min(50vw, 100vh - 260px);
+    font-size: calc($board-size / 16);
+    width: calc($board-size);
+    height: calc($board-size);
+  }
+
+  
+}
 
 .border-bottom-box {
   border-bottom: $box-border;
@@ -60,12 +60,6 @@ $normal-border: 1px solid black;
 
 .border-right-no {
   border-right: 0px;
-}
-
-.board {
-  border: $box-border;
-  text-align: center;
-  margin-top: 8px;
 }
 
 .board input {
