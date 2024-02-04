@@ -12,6 +12,7 @@ import App.Data.Difficulty (Difficulty(..), allDiffuculties)
 import App.Data.Puzzle (Puzzle, loadPuzzle, savePuzzle)
 import App.Data.Sudoku.Board (Size(..))
 import App.Data.Usage (Usage(..), getAvailable, parseUsages, saveUsages)
+import App.Logic.Variant (randomPuzzleVariant)
 import App.Utils.Array (withIndex)
 import App.Utils.Hoist (hoistMaybe)
 import App.Utils.Partial (runPartial)
@@ -122,7 +123,8 @@ handleQuery = case _ of
     H.modify_ $ \s -> s { providedPuzzle = Just $ Tuple diff index }
 
     lift $ handleAction TickManager
-    pure $ returnPuzzle puzzle
+    puzzleVariant <- randomPuzzleVariant puzzle
+    pure $ returnPuzzle puzzleVariant
   SolvedPuzzle solved -> runMaybeT $ do
     { usage, providedPuzzle } <- H.get
 
