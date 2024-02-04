@@ -5,6 +5,7 @@ package:
     - console
     - effect
     - halogen
+    - js-maps
     - nullable
     - prelude
     - random

@@ -7,18 +7,18 @@ module App.Widget.FreeGame
 
 import Prelude
 
+import App.Controller.ToastController as Toast
+import App.Controller.ToastController.Toast (MessageLevel(..))
 import App.Data.Sudoku.Board (Board, Position, Size, getEmptyBoard, isComplete, setAt)
 import App.Data.Sudoku.Error (GameState(..))
 import App.Data.Sudoku.Field (valueToUserInput)
 import App.Logic.Error (calcErrors)
 import App.Wasm.Solver (solveSudoku, getHint)
 import App.Widget.Board as BoardWidget
-import App.Widget.Game (Action, MandatoryAction(..), Slots, _board, mkGameComponent)
+import App.Widget.Game (Action, MandatoryAction(..), Slots, _board, _toasts, hintMessage, mkGameComponent)
 import Control.Monad.Maybe.Trans (runMaybeT)
 import Data.Maybe (Maybe(..))
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Effect.Class (liftEffect)
-import Effect.Class.Console (log)
 import Halogen as H
 import Partial.Unsafe (unsafePartial)
 
@@ -59,7 +59,7 @@ component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
         H.tell _board unit BoardWidget.ResetSelection
         mSolution <- liftAff $ runMaybeT $ solveSudoku board
         case mSolution of
-          Nothing -> liftEffect $ log "No solutions"
+          Nothing -> H.tell _toasts unit $ Toast.NewToast { msg: "No valid solutions found", level: WarningMsg }
           Just solution -> do 
             H.modify_ $ \s -> s { board = solution, selectedPos = Nothing, gameState = Complite }
             H.tell _board unit BoardWidget.ResetSelection
@@ -69,9 +69,9 @@ component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
         H.tell _board unit BoardWidget.ResetSelection
         mHint <- liftAff $ runMaybeT $ getHint board 2
         case mHint of
-          Nothing -> liftEffect $ log "No hint"
+          Nothing -> H.tell _toasts unit $ Toast.NewToast { msg: "No hind found", level: WarningMsg }
           Just { position, digit, level } -> do
-            liftEffect $ log $ "Hint level " <> show level
+            H.tell _toasts unit $ Toast.NewToast { msg: hintMessage level, level: InfoMsg }
             newState <- H.modify $ \s -> s { board = unsafePartial $ setAt position (valueToUserInput digit) s.board }
             handleMandatory $ BoardUpdated newState.board
         H.modify_ $ \s -> s { freeze = false }

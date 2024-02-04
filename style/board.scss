@@ -109,7 +109,7 @@ $normal-border: 1px solid black;
   width: 100vw;
   height: calc(100vh - 58px);
   background-color: #000000ab;
-  z-index: 1;
+  z-index: 2;
 
   .spinner-border {
     $size: 120px;

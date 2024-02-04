@@ -6,6 +6,8 @@ module App.Widget.PuzzleGame
 
 import Prelude
 
+import App.Controller.ToastController as Toast
+import App.Controller.ToastController.Toast (MessageLevel(..))
 import App.Data.Puzzle (Puzzle)
 import App.Data.Sudoku.Board (Board, Position, isComplete, setAt, freezeSudoku)
 import App.Data.Sudoku.Error (GameState(..))
@@ -16,7 +18,7 @@ import App.Utils.Aff (withTimeout)
 import App.Utils.RandomMonad (randomEntry)
 import App.Wasm.Solver (getHint)
 import App.Widget.Board as BoardWidget
-import App.Widget.Game (Action, MandatoryAction(..), Slots, _board, mkGameComponent)
+import App.Widget.Game (Action, MandatoryAction(..), Slots, _board, _toasts, hintMessage, mkGameComponent)
 import Control.Monad.Except (except, runExceptT)
 import Control.Monad.Maybe.Trans (runMaybeT)
 import Data.Either (Either(..), note)
@@ -25,7 +27,6 @@ import Data.Time.Duration (Milliseconds(..))
 import Data.Tuple (Tuple(..))
 import Effect.Aff (delay)
 import Effect.Aff.Class (class MonadAff, liftAff)
-import Effect.Class.Console (error, log)
 import Halogen as H
 import Partial.Unsafe (unsafePartial)
 
@@ -78,7 +79,7 @@ component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pu
         let solution = puzzle.solution
         eHint <- runExceptT $ do 
           foundErrors <- except 
-            $ note "filledDifferances error" 
+            $ note "Occured filledDifferances error" 
             $ filledDifferances board solution
           case foundErrors of 
             [] -> do -- No mistakes
@@ -87,7 +88,7 @@ component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pu
                 Just hint -> pure hint
                 Nothing -> do 
                   emptyPositionsWithSolutions <- except 
-                    $ note "emptyDifferances error"
+                    $ note "Occured emptyDifferances error"
                     $ emptyDifferances board solution
                   Tuple position value <- randomEntry emptyPositionsWithSolutions
                   pure $ { position, digit: value, level: 4 }
@@ -96,9 +97,9 @@ component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pu
               position <- randomEntry errors
               pure $ { position, digit: Value 0, level: -1 }
         case eHint of 
-          Left e -> error $ e
+          Left e -> H.tell _toasts unit $ Toast.NewToast { msg: e, level: ErrorMsg }
           Right { position, digit, level } -> do
-            log $ "Hint level " <> show level
+            H.tell _toasts unit $ Toast.NewToast { msg: hintMessage level, level: InfoMsg }
             newState <- H.modify $ \s -> s { board = unsafePartial $ setAt position (valueToUserInput digit) s.board }
             handleMandatory $ BoardUpdated $ newState.board
         H.modify_ $ \s -> s { freeze = false }

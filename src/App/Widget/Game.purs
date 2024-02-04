@@ -1,15 +1,18 @@
 module App.Widget.Game
-  ( MandatoryAction(..)
-  , Action
-  , State
+  ( Action
+  , MandatoryAction(..)
   , Slots
+  , State
   , _board
+  , _toasts
+  , hintMessage
   , mkGameComponent
   )
   where
 
 import Prelude
 
+import App.Controller.ToastController as ToastController
 import App.Data.Sudoku.Board (Board, Position, Size, peekAt, setAt, toRowSize)
 import App.Data.Sudoku.Error (Error, GameState(..))
 import App.Data.Sudoku.Field (Value(..), fieldToValue, unValue, valueToUserInput)
@@ -18,6 +21,7 @@ import App.Widget.Board as BoardWidget
 import App.Widget.Keyboard as KeyboardWidget
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
 import Data.Tuple (Tuple(..), fst, snd)
+import Effect.Aff.Class (class MonadAff)
 import Effect.Class (class MonadEffect)
 import Effect.Class.Console (error)
 import Halogen (ClassName(..))
@@ -52,13 +56,15 @@ data MandatoryAction i
 type Slots = 
   ( board    :: H.Slot BoardWidget.Query BoardWidget.Output Unit
   , keyboard :: forall q. H.Slot q KeyboardWidget.Output Unit
+  , toasts   :: forall o. H.Slot ToastController.Query o Unit
   )
 
 _board = Proxy :: Proxy "board"
 _keyboard = Proxy :: Proxy "keyboard"
+_toasts = Proxy :: Proxy "toasts"
 
 
-mkGameComponent :: forall q m i o r c. MonadEffect m 
+mkGameComponent :: forall q m i o r c. MonadAff m 
   => (i -> State r)
   -> (MandatoryAction i -> H.HalogenM (State r) (Action i c) Slots o m Unit)
   -> (c -> H.HalogenM (State r) (Action i c) Slots o m Unit)
@@ -75,7 +81,7 @@ mkGameComponent prepareInput handleMandatory handleCustom handleQuery =
                                    }
     }
 
-render :: forall m i c r. State r -> H.ComponentHTML (Action i c) Slots m
+render :: forall m i c r. MonadAff m => State r -> H.ComponentHTML (Action i c) Slots m
 render state =
   HH.div [ HP.classes $ map ClassName ["game", "col-10", "col-md-8", "col-xl-6", "row", "justify-content-center"] ]
     [ HH.slot _board unit BoardWidget.component { board: state.board, errors, solved, isMobile } HandleBoard
@@ -98,6 +104,7 @@ render state =
     , HH.div 
         [ HP.classes $ map ClassName [if state.freeze then "freeze-div" else "no-freeze"] ]
         [ HH.div [HP.class_ $ ClassName "spinner-border"] []]
+    , HH.slot_ _toasts unit ToastController.controller unit
     ]
   where
     isSelected :: Boolean
@@ -152,3 +159,12 @@ handleAction handleMandatory handleCustom = case _ of
       Nothing -> error "Could not updated board"
   Mandatory action -> handleMandatory action
   Custom action -> handleCustom action
+
+hintMessage :: Int -> String
+hintMessage = case _ of 
+  -1 -> "Your mistake was corrected"
+  0 -> "A trivial hint was applied"
+  1 -> "An untrivial hint was applied"
+  2 -> "A hard hint was applied"
+  3 -> "An impossiable hint was applied"
+  _ -> "A hint was applied"
