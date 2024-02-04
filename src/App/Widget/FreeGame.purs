@@ -61,8 +61,8 @@ component = mkGameComponent init handleMandatory (const $ pure unit) handleQuery
         case mSolution of
           Nothing -> liftEffect $ log "No solutions"
           Just solution -> do 
-            newState <- H.modify $ \s -> s { board = solution, selectedPos = Nothing }
-            handleMandatory $ BoardUpdated newState.board
+            H.modify_ $ \s -> s { board = solution, selectedPos = Nothing, gameState = Complite }
+            H.tell _board unit BoardWidget.ResetSelection
         H.modify_ $ \s -> s { freeze = false }
       Hint -> do 
         { board } <- H.modify $ \s -> s { freeze = true }

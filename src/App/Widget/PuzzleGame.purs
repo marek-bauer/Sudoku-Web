@@ -69,9 +69,9 @@ component = mkGameComponent init handleMandatory (const $ pure unit) (const $ pu
             H.raise Solved
           _ -> H.modify_ $ \s -> s { gameState = Incomplite errors } 
       Solve -> do
-        { board } <- H.modify $ \s -> s { board = s.puzzle.solution, selectedPos = Nothing }
+        H.modify_ $ \s -> s { board = freezeSudoku $ s.puzzle.solution, selectedPos = Nothing, gameState = Complite }
         H.tell _board unit BoardWidget.ResetSelection
-        handleMandatory $ BoardUpdated $ board
+        H.raise Solved
       Hint -> do
         { board, puzzle } <- H.modify $ \s -> s { freeze = true }
         H.tell _board unit BoardWidget.ResetSelection
