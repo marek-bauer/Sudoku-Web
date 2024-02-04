@@ -19,7 +19,7 @@ import JS.Map.Primitive.Key (class Key)
 import Type.Proxy (Proxy(..))
 
 toastTTL :: Milliseconds
-toastTTL = Milliseconds (8.0 * 1000.0)
+toastTTL = Milliseconds (5.0 * 1000.0)
 
 toastTransition :: Milliseconds
 toastTransition = Milliseconds 1000.0
