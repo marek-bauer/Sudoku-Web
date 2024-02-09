@@ -1,4 +1,4 @@
-{ 
+{
   "private": true,
   "dependencies": {
     "bootstrap": "^5.3.2",
@@ -6,16 +6,28 @@
     "wasm_sudoku_solver": "file:./wasm/pkg"
   },
   "devDependencies": {
+    "@parcel/reporter-dev-server": "^2.10.3",
     "@parcel/transformer-js": "^2.10.3",
     "@parcel/transformer-sass": "^2.10.3",
+    "cordova-android": "^12.0.1",
     "parcel": "^2.10.3",
     "purescript": "^0.15.4",
-    "spago": "^0.93.18"
+    "spago": "^0.93.18",
+    "wasm-pack": "^0.12.1"
   },
   "scripts": {
-    "build": "spago build",
-    "test": "spago test",
+    "build-wasm": "cd wasm && wasm-pack build --target=web",
+    "build-purs": "spago build",
+    "build-js": "spago build && parcel build ./dev/index.html --dist-dir=./www",
+    "build-all": "cd wasm && wasm-pack build --target=web && cd .. && spago build && parcel build ./dev/index.html --dist-dir=./www",
+    "test": "spago test && cd wasm && wasm-pack test",
     "serve": "parcel ./dev/index.html --open",
-    "build-prod": "rm -rf prod && mkdir -p prod && cp dev/index.html prod/ && spago bundle-app --to prod/index.js && parcel build prod/index.html"
+    "add-android": "cordova platform add android",
+    "build-cordova": "cordova build"
+  },
+  "cordova": {
+    "platforms": [
+      "android"
+    ]
   }
 }
